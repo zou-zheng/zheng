@@ -445,6 +445,14 @@ function getAnalyticsUserId() {
   return generated;
 }
 
+const ONLINE_API_ORIGIN = 'https://zheng-production-440f.up.railway.app';
+
+function apiEndpoint(pathname) {
+  const nativeAssetPage = globalThis.location?.hostname === 'appassets.androidplatform.net';
+  const origin = globalThis.MINGHUI_API_ORIGIN || (nativeAssetPage ? ONLINE_API_ORIGIN : '');
+  return `${origin}${pathname}`;
+}
+
 function trackEvent(eventName, metadata = {}) {
   if (!eventName) return;
   const safeMetadata = Object.fromEntries(
@@ -466,7 +474,7 @@ function trackEvent(eventName, metadata = {}) {
     try { globalThis.AndroidBridge.recordEvent(JSON.stringify(payload)); } catch {}
     return;
   }
-  fetch('/api/events', {
+  fetch(apiEndpoint('/api/events'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -1108,7 +1116,7 @@ async function requestAiSolve(question, followUp = '', imageData = state.aiImage
   saveState();
   render();
   try {
-    const response = await fetch('/api/ai/solve', {
+    const response = await fetch(apiEndpoint('/api/ai/solve'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ question, imageData, imageName: state.aiImageName, grade: state.grade, subject: getSubject().name, textbook: state.textbook, followUp, history: state.aiConversation.slice(-6) }),
