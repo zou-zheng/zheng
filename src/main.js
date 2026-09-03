@@ -1421,9 +1421,11 @@ function bindEvents() {
       const rate = Number(element.dataset.speakRate) || 0.82;
       if (globalThis.AndroidBridge?.speakText) {
         try {
+          const speechStatus = globalThis.AndroidBridge.speechStatus?.() || 'loading';
+          if (speechStatus === 'unavailable') return showToast('手机文字转语音不可用，请在系统设置中启用语音服务或安装英语语音包');
           globalThis.AndroidBridge.speakText(text, language, rate);
           trackEvent('speak_text', { contentType: text.split(' ').length > 2 ? 'example' : 'word', platform: 'android' });
-          return showToast(text.split(' ').length > 2 ? '正在用手机播放例句' : `正在用手机播放：${text}`);
+          return showToast(speechStatus === 'loading' ? '正在准备手机语音，马上播放' : (text.split(' ').length > 2 ? '正在用手机播放例句' : `正在用手机播放：${text}`));
         } catch {}
       }
       const speech = window.speechSynthesis;
