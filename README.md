@@ -34,11 +34,11 @@ npm run dev
 
 AI 页面默认可以用离线示例演示。需要真实联网解题时：
 
-1. 复制 `.env.example` 为 `.env`，填写 `OPENAI_API_KEY`。
+1. 复制 `.env.example` 为 `.env`，填写 `AI_API_KEY`。当前默认配置为 DeepSeek；也可以将 `AI_PROVIDER` 改为 `openai` 使用 OpenAI。
 2. 在一个终端运行 `npm run server` 启动 AI 接口和操作记录服务。
 3. 在另一个终端运行 `npm run dev`，打开页面左侧的“AI解题”。
 
-真实 Key 只放在服务端环境变量中，前端通过 `/api/ai/solve` 调用。服务端支持文字题目和 base64 图片题目，使用 Responses API 的图片输入与联网搜索工具，并把识别出的题目、答案、分步解法、不同解法、对应教材知识点和搜索来源返回给页面。点击“去学这个知识点”会跳转到对应学科的基础学习路径；没有 Key 时前端会自动回退到内置演示解析。
+真实 Key 只放在服务端环境变量中，前端通过 `/api/ai/solve` 调用。服务端支持文字题目和 base64 图片题目，使用 Responses API 的图片输入与联网搜索工具，并把识别出的题目、答案、分步解法、不同解法、对应教材知识点和搜索来源返回给页面。DeepSeek 文字题目使用 `deepseek-v4-flash`，拍照识题使用 `deepseek-v4-flash-vision-exp`；点击“去学这个知识点”会跳转到对应学科的基础学习路径；没有 Key 时前端会自动回退到内置演示解析。
 
 ## 说明
 
