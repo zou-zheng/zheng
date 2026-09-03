@@ -1,6 +1,6 @@
 import http from 'node:http';
 import path from 'node:path';
-import { mkdirSync, readFileSync } from 'node:fs';
+import { createReadStream, mkdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -24,6 +24,7 @@ const apiKey = process.env.OPENAI_API_KEY;
 const model = process.env.OPENAI_MODEL || 'gpt-5.6-luna';
 
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
+const distDir = path.join(serverDir, '..', 'dist');
 const dataDir = process.env.DATA_DIR || path.join(serverDir, 'data');
 mkdirSync(dataDir, { recursive: true });
 const db = new DatabaseSync(path.join(dataDir, 'minghui-learning.sqlite'));
@@ -71,6 +72,35 @@ function readBody(request) {
     });
     request.on('error', reject);
   });
+}
+
+function serveStatic(request, response) {
+  if (request.method !== 'GET') return false;
+  try {
+    const url = new URL(request.url, `http://${request.headers.host || '127.0.0.1'}`);
+    const requestedPath = decodeURIComponent(url.pathname);
+    const relativePath = requestedPath === '/' ? 'index.html' : requestedPath.replace(/^\/+/, '');
+    const filePath = path.resolve(distDir, relativePath);
+    if (filePath !== distDir && !filePath.startsWith(`${distDir}${path.sep}`)) return false;
+    const candidate = statSync(filePath).isFile() ? filePath : path.join(distDir, 'index.html');
+    const contentTypes = {
+      '.css': 'text/css; charset=utf-8',
+      '.html': 'text/html; charset=utf-8',
+      '.js': 'text/javascript; charset=utf-8',
+      '.json': 'application/json; charset=utf-8',
+      '.svg': 'image/svg+xml',
+      '.png': 'image/png',
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.webp': 'image/webp',
+      '.ico': 'image/x-icon',
+    };
+    response.writeHead(200, { 'Content-Type': contentTypes[path.extname(candidate).toLowerCase()] || 'application/octet-stream' });
+    createReadStream(candidate).pipe(response);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function parseTutorText(text, meta) {
@@ -206,6 +236,7 @@ const server = http.createServer(async (request, response) => {
     `).all(userId);
     return sendJson(response, 200, { ok: true, total: Number(total.count), events });
   }
+  if (serveStatic(request, response)) return;
   if (request.method !== 'POST' || request.url !== '/api/ai/solve') return sendJson(response, 404, { error: 'Not found' });
   try {
     const payload = await readBody(request);
