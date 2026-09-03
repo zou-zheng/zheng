@@ -109,27 +109,55 @@ function serveStatic(request, response) {
 
 function parseTutorText(text, meta) {
   const clean = String(text || '').trim();
-  try {
-    const parsed = JSON.parse(clean.replace(/^```json\s*/i, '').replace(/```$/i, '').trim());
-    return { ...parsed, isDemo: false, recognizedQuestion: parsed.recognizedQuestion || meta.question, knowledgePoint: parsed.knowledgePoint || parsed.tag || '基础知识点', courseTitle: parsed.courseTitle || parsed.knowledgePoint || parsed.tag || '基础知识点', approaches: parsed.approaches || [], followUpResponse: parsed.followUpResponse || (meta.followUp ? parsed.summary || '' : ''), sources: meta.sources };
-  } catch {
-    return {
-      isDemo: false,
-      subject: meta.subject || '综合',
-      tag: '联网解析',
-      final: '请根据下方分步思路作答',
-      summary: clean.slice(0, 120),
-      steps: [clean],
-      approaches: [],
-      knowledgePoint: '对应教材基础知识点',
-      courseTitle: '基础知识点讲解',
-      concept: '建议结合参考来源和对应教材章节再次核对。',
-      similar: '',
-      recognizedQuestion: meta.question,
-      followUpResponse: meta.followUp ? clean.slice(0, 240) : '',
-      sources: meta.sources,
-    };
+  const candidates = [];
+  const normalized = clean.replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+  candidates.push(normalized);
+  for (let start = 0; start < clean.length; start += 1) {
+    if (clean[start] !== '{') continue;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    for (let index = start; index < clean.length; index += 1) {
+      const character = clean[index];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (character === '\\') escaped = true;
+        else if (character === '"') inString = false;
+        continue;
+      }
+      if (character === '"') inString = true;
+      else if (character === '{') depth += 1;
+      else if (character === '}' && --depth === 0) {
+        candidates.push(clean.slice(start, index + 1));
+        break;
+      }
+    }
   }
+  for (const candidate of candidates.reverse()) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (!parsed || typeof parsed !== 'object' || (!parsed.final && !parsed.steps && !parsed.knowledgePoint)) continue;
+      return { ...parsed, isDemo: false, recognizedQuestion: parsed.recognizedQuestion || meta.question, knowledgePoint: parsed.knowledgePoint || parsed.tag || '基础知识点', courseTitle: parsed.courseTitle || parsed.knowledgePoint || parsed.tag || '基础知识点', approaches: parsed.approaches || [], followUpResponse: parsed.followUpResponse || (meta.followUp ? parsed.summary || '' : ''), sources: meta.sources };
+    } catch {
+      // DeepSeek thinking responses may contain explanatory text around the final JSON.
+    }
+  }
+  return {
+    isDemo: false,
+    subject: meta.subject || '综合',
+    tag: '联网解析',
+    final: '请根据下方分步思路作答',
+    summary: clean.slice(0, 120),
+    steps: [clean],
+    approaches: [],
+    knowledgePoint: '对应教材基础知识点',
+    courseTitle: '基础知识点讲解',
+    concept: '建议结合参考来源和对应教材章节再次核对。',
+    similar: '',
+    recognizedQuestion: meta.question,
+    followUpResponse: meta.followUp ? clean.slice(0, 240) : '',
+    sources: meta.sources,
+  };
 }
 
 function extractOutputText(data) {
@@ -158,6 +186,7 @@ async function solveWithProvider({ question, imageData, grade, subject, textbook
   const requestBody = {
     model: imageData ? visionModel : model,
     tools: [{ type: 'web_search' }],
+    text: { format: { type: 'json_object' } },
     instructions: `你是“铭惠学习”的初中辅导老师。你的目标是帮助学生真正学会，而不是只给最终答案。
 学生基础可能较弱，请使用鼓励、低门槛的表达，先补前置知识，再讲当前题目；不要批评分数，也不要一上来拔高难度。不要输出隐藏思维链、内部推理草稿或冗长自言自语，只提供简洁、可验证的分步解法。
 如果附带图片，请先识别题目文字；图片中有多道题时，优先解最清晰或学生文字补充指定的那一道。
