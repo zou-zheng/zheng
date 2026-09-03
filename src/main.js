@@ -1,15 +1,15 @@
 import './styles.css';
 
 const subjects = [
-  { id: 'chinese', name: '语文', short: '语', tone: 'coral', icon: '文', mastery: 76, note: '古诗文 · 阅读 · 写作' },
-  { id: 'math', name: '数学', short: '数', tone: 'blue', icon: '∑', mastery: 68, note: '数与代数 · 几何' },
-  { id: 'english', name: '英语', short: '英', tone: 'mint', icon: 'A', mastery: 82, note: '词汇 · 语法 · 听力' },
-  { id: 'physics', name: '物理', short: '物', tone: 'violet', icon: '⚡', mastery: 61, note: '力学 · 光学 · 电学' },
-  { id: 'chemistry', name: '化学', short: '化', tone: 'yellow', icon: '⚗', mastery: 54, note: '物质 · 实验 · 方程式' },
-  { id: 'biology', name: '生物', short: '生', tone: 'green', icon: '✦', mastery: 71, note: '细胞 · 遗传 · 生态' },
-  { id: 'history', name: '历史', short: '史', tone: 'sand', icon: '▤', mastery: 65, note: '时间线 · 事件 · 史料' },
-  { id: 'geography', name: '地理', short: '地', tone: 'sky', icon: '⌁', mastery: 73, note: '地图 · 气候 · 区域' },
-  { id: 'morality', name: '道法', short: '道', tone: 'rose', icon: '♡', mastery: 88, note: '成长 · 法治 · 国情' },
+  { id: 'chinese', name: '语文', short: '语', tone: 'coral', icon: '文', mastery: 0, note: '古诗文 · 阅读 · 写作' },
+  { id: 'math', name: '数学', short: '数', tone: 'blue', icon: '∑', mastery: 0, note: '数与代数 · 几何' },
+  { id: 'english', name: '英语', short: '英', tone: 'mint', icon: 'A', mastery: 0, note: '词汇 · 语法 · 听力' },
+  { id: 'physics', name: '物理', short: '物', tone: 'violet', icon: '⚡', mastery: 0, note: '力学 · 光学 · 电学' },
+  { id: 'chemistry', name: '化学', short: '化', tone: 'yellow', icon: '⚗', mastery: 0, note: '物质 · 实验 · 方程式' },
+  { id: 'biology', name: '生物', short: '生', tone: 'green', icon: '✦', mastery: 0, note: '细胞 · 遗传 · 生态' },
+  { id: 'history', name: '历史', short: '史', tone: 'sand', icon: '▤', mastery: 0, note: '时间线 · 事件 · 史料' },
+  { id: 'geography', name: '地理', short: '地', tone: 'sky', icon: '⌁', mastery: 0, note: '地图 · 气候 · 区域' },
+  { id: 'morality', name: '道法', short: '道', tone: 'rose', icon: '♡', mastery: 0, note: '成长 · 法治 · 国情' },
 ];
 
 const textbookOptions = {
@@ -358,14 +358,15 @@ Object.entries(extraPracticeQuestions).concat(Object.entries(examPracticeQuestio
 });
 
 const defaultState = {
+  profileVersion: 2,
   page: 'home',
   selectedSubject: 'math',
   grade: '初二',
   semester: '上册',
   textbook: '人教版',
-  points: 1280,
-  streak: 7,
-  todayProgress: 68,
+  points: 0,
+  streak: 0,
+  todayProgress: 0,
   selectedQuestion: 0,
   selectedAnswer: null,
   typedAnswer: '',
@@ -403,13 +404,18 @@ const defaultState = {
   referenceSubject: 'math',
   toast: '',
   completedLessons: [],
-  wrongIds: [1, 3],
+  wrongIds: [],
 };
 
 const STORAGE_KEY = 'minghui-learning-state';
 const LEGACY_STORAGE_KEY = 'qiming-learning-state';
 const BRAND_NAME = '铭惠学习';
 const AI_BRAND_NAME = '铭惠 AI';
+const USER_NAME = '小妹';
+const USER_INITIAL = '妹';
+// 这是资料结构版本，不是每次发版都要递增的应用版本。
+// 只有没有保存资料的首次安装，或旧版演示资料，才初始化为新用户；后续 APK 升级永远沿用已有记录。
+const PROFILE_SCHEMA_VERSION = 2;
 
 let state = loadState();
 
@@ -417,7 +423,11 @@ function loadState() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     const saved = stored ? JSON.parse(stored) : null;
-    const nextState = { ...defaultState, ...(saved || {}), page: 'home', toast: '', selectedAnswer: null, questionAnswered: false, aiImageData: null, aiImageName: '' };
+    const hasSavedProfile = Boolean(saved && typeof saved === 'object' && !Array.isArray(saved));
+    const isLegacyDemoProfile = hasSavedProfile && !Object.prototype.hasOwnProperty.call(saved, 'profileVersion');
+    const shouldInitializeNewProfile = !hasSavedProfile || isLegacyDemoProfile;
+    if (shouldInitializeNewProfile) localStorage.removeItem('minghui-analytics-user-id');
+    const nextState = { ...defaultState, ...(shouldInitializeNewProfile ? {} : saved), profileVersion: PROFILE_SCHEMA_VERSION, page: 'home', toast: '', selectedAnswer: null, questionAnswered: false, aiImageData: null, aiImageName: '' };
     if (!nextState.practiceSetBySubject || typeof nextState.practiceSetBySubject !== 'object' || Array.isArray(nextState.practiceSetBySubject)) nextState.practiceSetBySubject = {};
     if (!nextState.completedPracticeSets || typeof nextState.completedPracticeSets !== 'object' || Array.isArray(nextState.completedPracticeSets)) nextState.completedPracticeSets = {};
     if (!nextState.diagnosticAnswers || typeof nextState.diagnosticAnswers !== 'object' || Array.isArray(nextState.diagnosticAnswers)) nextState.diagnosticAnswers = {};
@@ -720,12 +730,12 @@ function layout(content) {
   return `<div class="app-shell">
     <aside class="sidebar">
       <div class="brand"><div class="brand-mark">✦</div><div><strong>${BRAND_NAME}</strong><span>初中全科学习伴侣</span></div></div>
-      <div class="profile-mini"><div class="avatar">林</div><div><strong>林小满</strong><span>初二 · 7天连续学习</span></div><button class="icon-button" data-page="profile" aria-label="个人中心">${icon('more', 18)}</button></div>
-      <nav class="side-nav"><div class="nav-caption">学习空间</div>${navItems.map(([ico, page, label]) => `<button class="nav-item ${state.page === page ? 'active' : ''}" data-page="${page}">${icon(ico, 19)}<span>${label}</span>${page === 'wrong' ? '<em>2</em>' : ''}</button>`).join('')}</nav>
-      <div class="side-bottom"><div class="focus-card"><div class="focus-spark">${icon('flame', 17)}</div><div><strong>本周学习力</strong><span>超过 78% 的同学</span></div><b>Lv.3</b></div><button class="nav-item muted" data-page="profile">${icon('settings', 19)}<span>设置</span></button></div>
+      <div class="profile-mini"><div class="avatar">${USER_INITIAL}</div><div><strong>${USER_NAME}</strong><span>${state.grade} · 新用户</span></div><button class="icon-button" data-page="profile" aria-label="个人中心">${icon('more', 18)}</button></div>
+      <nav class="side-nav"><div class="nav-caption">学习空间</div>${navItems.map(([ico, page, label]) => `<button class="nav-item ${state.page === page ? 'active' : ''}" data-page="${page}">${icon(ico, 19)}<span>${label}</span>${page === 'wrong' && state.wrongIds.length ? `<em>${state.wrongIds.length}</em>` : ''}</button>`).join('')}</nav>
+      <div class="side-bottom"><div class="focus-card"><div class="focus-spark">${icon('flame', 17)}</div><div><strong>学习起点</strong><span>完成第一个任务</span></div><b>Lv.1</b></div><button class="nav-item muted" data-page="profile">${icon('settings', 19)}<span>设置</span></button></div>
     </aside>
     <main class="main-content">
-      <header class="topbar"><button class="mobile-menu" data-action="toggle-sidebar">${icon('more', 20)}</button><div class="breadcrumb"><span>学习空间</span><i>/</i><strong>${navItems.find((item) => item[1] === state.page)?.[2] || '首页'}</strong></div><div class="top-actions"><div class="search-box">${icon('search', 17)}<input placeholder="搜索知识点、课程或题目" /></div><button class="notification" data-action="notify" aria-label="通知">${icon('bell', 20)}<i></i></button><div class="top-avatar">林</div></div></header>
+      <header class="topbar"><button class="mobile-menu" data-action="toggle-sidebar">${icon('more', 20)}</button><div class="breadcrumb"><span>学习空间</span><i>/</i><strong>${navItems.find((item) => item[1] === state.page)?.[2] || '首页'}</strong></div><div class="top-actions"><div class="search-box">${icon('search', 17)}<input placeholder="搜索知识点、课程或题目" /></div><button class="notification" data-action="notify" aria-label="通知">${icon('bell', 20)}<i></i></button><div class="top-avatar">${USER_INITIAL}</div></div></header>
       <div class="page-content">${content}</div>
     </main>
     <nav class="mobile-nav">${navItems.map(([ico, page, label]) => `<button class="mobile-nav-item ${state.page === page ? 'active' : ''}" data-page="${page}">${icon(ico, 19)}<span>${label}</span></button>`).join('')}</nav>
@@ -735,11 +745,11 @@ function layout(content) {
 
 function homePage() {
   const continued = getSubject('math');
-  return layout(`<section class="page-heading"><div><div class="eyebrow">星期三 · 9月2日 <span class="live-dot"></span> 学习状态良好</div><h1>早上好，林小满 <span class="wave">✋</span></h1><p>今天也要稳稳地向前走，完成 3 个小目标吧。</p></div><button class="ghost-button" data-action="show-report">查看本周报告 ${icon('arrow', 16)}</button></section>
-    <section class="hero-grid"><article class="hero-card"><div class="hero-copy"><span class="hero-kicker">今日学习计划</span><h2>把今天学会的，<br/><em>变成明天的底气。</em></h2><p>专注一点点，进步看得见</p><button class="primary-button" data-page="learn">开始今天的学习 ${icon('arrow', 17)}</button></div><div class="hero-art"><div class="sun-orb"></div><div class="planet planet-one"></div><div class="planet planet-two"></div><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="hero-mascot">✦</div><div class="star star-a">✧</div><div class="star star-b">✦</div><div class="star star-c">·</div></div><div class="hero-progress">${progressRing(state.todayProgress, '今日完成')}</div></article><article class="streak-card"><div class="streak-top"><span class="icon-bubble flame">${icon('flame', 20)}</span><span class="pill warm">连续学习</span></div><strong>${state.streak}<small> 天</small></strong><p>再坚持 3 天，就能解锁<br/>「专注小行家」徽章</p><div class="streak-days">${['一','二','三','四','五','六','日'].map((day, index) => `<span class="day ${index < 3 ? 'done' : index === 3 ? 'today' : ''}"><i>${index < 3 ? icon('check', 11) : ''}</i>${day}</span>`).join('')}</div></article></section>
-    <section class="stats-grid">${statCard('clock', '本周学习时长', '6h 42m', '比上周多 28%', 'blue')}${statCard('target', '知识点掌握', '73%', '已掌握 86 个', 'mint')}${statCard('trophy', '本周获得星星', '128', '距离下一级 42 颗', 'yellow')}</section>
-    <div class="section-grid"><section class="content-card today-tasks"><div class="card-heading"><div><span class="card-eyebrow">TODAY'S PLAN</span><h3>今日学习任务</h3></div><button class="text-button" data-page="learn">查看全部 ${icon('chevron', 15)}</button></div><div class="task-summary"><div class="task-summary-icon">${icon('target', 20)}</div><div class="task-summary-copy"><strong>完成 3 个任务，赢取 30 星星</strong><span>已完成 1 / 3 · 预计 32 分钟</span></div><div class="mini-progress"><span style="width:33%"></span></div></div><div class="task-list"><button class="task-row done" data-action="complete-task"><span class="task-check">${icon('check', 13)}</span><span class="task-info"><strong>英语 · Unit 5 词汇听音辨词</strong><small>词汇 · 12 题</small></span><span class="task-status">已完成</span></button><button class="task-row" data-page="practice"><span class="task-check"></span><span class="task-info"><strong>数学 · 一次函数基础闯关</strong><small>基础巩固 · 10 题</small></span><span class="task-time">15 min ${icon('chevron', 14)}</span></button><button class="task-row" data-page="learn"><span class="task-check"></span><span class="task-info"><strong>语文 · 《观沧海》分句背诵</strong><small>古诗文 · 8 句</small></span><span class="task-time">8 min ${icon('chevron', 14)}</span></button></div></section><section class="content-card continue-card"><div class="card-heading"><div><span class="card-eyebrow">CONTINUE LEARNING</span><h3>继续学习</h3></div><button class="more-button">${icon('more', 18)}</button></div><div class="continue-visual math-visual"><div class="visual-grid"></div><span class="formula">y = kx + b</span><span class="formula small">△ABC</span><span class="visual-orbit"></span></div><div class="continue-meta"><div><span class="tag math-tag">数学 · 初二上册</span><strong>一次函数：图象与性质</strong><small>上次学到：正比例函数</small></div><button class="play-button" data-page="learn">${icon('play', 18)}</button></div><div class="continue-bar"><span style="width:64%"></span></div><div class="continue-footer"><span>学习进度 64%</span><span>还剩 6 分钟</span></div></section></div>
-    <div class="section-grid lower-grid"><section class="content-card mastery-card"><div class="card-heading"><div><span class="card-eyebrow">OVERVIEW</span><h3>学科掌握度</h3></div><button class="text-button" data-page="learn">去学习 ${icon('arrow', 15)}</button></div><div class="mastery-columns">${subjects.slice(0, 5).map(subjectMeter).join('')}${subjects.slice(5).map(subjectMeter).join('')}</div></section><section class="content-card wrong-preview"><div class="card-heading"><div><span class="card-eyebrow">REVIEW SMART</span><h3>错题回炉</h3></div><button class="text-button" data-page="wrong">全部错题 ${icon('chevron', 15)}</button></div><div class="review-callout"><div class="review-icon">${icon('spark', 20)}</div><div><strong>今天复习 2 道，巩固薄弱点</strong><span>系统已为你准备好同类验证题</span></div><button class="small-arrow" data-page="wrong">${icon('arrow', 16)}</button></div><div class="review-meta"><span><i class="dot coral"></i>数学 · 一次函数</span><span><i class="dot violet"></i>物理 · 力与运动</span></div></section></div>`);
+  return layout(`<section class="page-heading"><div><div class="eyebrow">今天 <span class="live-dot"></span> 学习新起点</div><h1>早上好，${USER_NAME} <span class="wave">✋</span></h1><p>今天从一个小目标开始，完成第一个学习任务吧。</p></div><button class="ghost-button" data-action="show-report">查看本周报告 ${icon('arrow', 16)}</button></section>
+    <section class="hero-grid"><article class="hero-card"><div class="hero-copy"><span class="hero-kicker">今日学习计划</span><h2>把今天学会的，<br/><em>变成明天的底气。</em></h2><p>专注一点点，进步看得见</p><button class="primary-button" data-page="learn">开始今天的学习 ${icon('arrow', 17)}</button></div><div class="hero-art"><div class="sun-orb"></div><div class="planet planet-one"></div><div class="planet planet-two"></div><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><div class="hero-mascot">✦</div><div class="star star-a">✧</div><div class="star star-b">✦</div><div class="star star-c">·</div></div><div class="hero-progress">${progressRing(state.todayProgress, '今日完成')}</div></article><article class="streak-card"><div class="streak-top"><span class="icon-bubble flame">${icon('flame', 20)}</span><span class="pill warm">连续学习</span></div><strong>${state.streak}<small> 天</small></strong><p>${state.streak ? '再坚持 3 天，就能解锁' : '完成今天的第一个任务，开启连续学习'}<br/>「专注小行家」徽章</p><div class="streak-days">${['一','二','三','四','五','六','日'].map((day, index) => `<span class="day ${index < Math.min(3, state.streak) ? 'done' : index === Math.min(3, state.streak) ? 'today' : ''}"><i>${index < Math.min(3, state.streak) ? icon('check', 11) : ''}</i>${day}</span>`).join('')}</div></article></section>
+    <section class="stats-grid">${statCard('clock', '本周学习时长', '0m', '刚开始学习', 'blue')}${statCard('target', '知识点掌握', '0%', '完成基础诊断后更新', 'mint')}${statCard('trophy', '本周获得星星', '0', '完成答题即可获得', 'yellow')}</section>
+    <div class="section-grid"><section class="content-card today-tasks"><div class="card-heading"><div><span class="card-eyebrow">TODAY'S PLAN</span><h3>今日学习任务</h3></div><button class="text-button" data-page="learn">查看全部 ${icon('chevron', 15)}</button></div><div class="task-summary"><div class="task-summary-icon">${icon('target', 20)}</div><div class="task-summary-copy"><strong>完成 3 个任务，赢取 30 星星</strong><span>已完成 0 / 3 · 预计 32 分钟</span></div><div class="mini-progress"><span style="width:0%"></span></div></div><div class="task-list"><button class="task-row" data-page="reference"><span class="task-check"></span><span class="task-info"><strong>英语 · 初二词汇听音辨词</strong><small>词汇 · 12 题</small></span><span class="task-time">8 min ${icon('chevron', 14)}</span></button><button class="task-row" data-page="practice"><span class="task-check"></span><span class="task-info"><strong>数学 · 一次函数基础闯关</strong><small>基础巩固 · 10 题</small></span><span class="task-time">15 min ${icon('chevron', 14)}</span></button><button class="task-row" data-page="learn"><span class="task-check"></span><span class="task-info"><strong>语文 · 《观沧海》分句背诵</strong><small>古诗文 · 8 句</small></span><span class="task-time">8 min ${icon('chevron', 14)}</span></button></div></section><section class="content-card continue-card"><div class="card-heading"><div><span class="card-eyebrow">START LEARNING</span><h3>开始学习</h3></div><button class="more-button">${icon('more', 18)}</button></div><div class="continue-visual math-visual"><div class="visual-grid"></div><span class="formula">y = kx + b</span><span class="formula small">△ABC</span><span class="visual-orbit"></span></div><div class="continue-meta"><div><span class="tag math-tag">数学 · 初二上册</span><strong>从基础知识开始</strong><small>还没有学习记录</small></div><button class="play-button" data-page="learn">${icon('play', 18)}</button></div><div class="continue-bar"><span style="width:0%"></span></div><div class="continue-footer"><span>学习进度 0%</span><span>准备开始</span></div></section></div>
+    <div class="section-grid lower-grid"><section class="content-card mastery-card"><div class="card-heading"><div><span class="card-eyebrow">OVERVIEW</span><h3>学科掌握度</h3></div><button class="text-button" data-page="learn">去学习 ${icon('arrow', 15)}</button></div><div class="mastery-columns">${subjects.slice(0, 5).map(subjectMeter).join('')}${subjects.slice(5).map(subjectMeter).join('')}</div></section><section class="content-card wrong-preview"><div class="card-heading"><div><span class="card-eyebrow">REVIEW SMART</span><h3>错题回炉</h3></div><button class="text-button" data-page="wrong">查看错题本 ${icon('chevron', 15)}</button></div><div class="review-callout"><div class="review-icon">${icon('spark', 20)}</div><div><strong>还没有错题</strong><span>完成练习后，错题会自动收录</span></div><button class="small-arrow" data-page="practice">${icon('arrow', 16)}</button></div><div class="review-meta"><span><i class="dot coral"></i>先完成基础诊断</span><span><i class="dot violet"></i>再开始闯关练习</span></div></section></div>`);
 }
 
 function diagnosticPage() {
@@ -930,11 +940,11 @@ function aiPage() {
 
 function wrongPage() {
   const wrongQuestions = questions.filter((question) => state.wrongIds.includes(question.id));
-  return layout(`<section class="page-heading compact"><div><div class="eyebrow">REVIEW & IMPROVE</div><h1>错题本 <span class="title-count">${wrongQuestions.length} 道待复习</span></h1><p>把做错的题，变成真正会做的题。</p></div><button class="primary-button" data-action="review-all">开始今日复习 ${icon('arrow', 16)}</button></section><section class="error-summary"><div class="error-summary-copy"><span class="card-eyebrow">SMART REVIEW</span><h3>今天复习 2 道，预计 12 分钟</h3><p>系统根据你的错误类型，优先安排“一次函数”和“力与运动”。</p></div><div class="error-summary-visual"><div class="orbit-ring"></div><div class="error-orb">${icon('spark', 24)}</div></div></section><div class="wrong-toolbar"><div class="tab-group"><button class="active">全部 <span>${wrongQuestions.length}</span></button><button>待掌握 <span>2</span></button><button>已掌握 <span>0</span></button></div><button class="filter-button">${icon('target', 16)} 按学科筛选 ${icon('chevron', 14)}</button></div><section class="content-card wrong-list">${wrongQuestions.map((question, index) => `<article class="wrong-item"><div class="wrong-index">0${index + 1}</div><div class="wrong-info"><div class="wrong-tags"><span class="subject-label ${question.subject === '数学' ? 'blue' : 'violet'}">${question.subject}</span><span>${question.tag}</span><span class="error-type">概念混淆</span></div><h3>${question.title}</h3><div class="wrong-answer"><span>你的答案：<b>${state.selectedQuestion === index ? '已查看' : '未作答'}</b></span><span>正确答案：<b>${question.options[question.answer]}</b></span></div></div><button class="secondary-button" data-action="review-question" data-question="${questions.indexOf(question)}">重做 ${icon('arrow', 15)}</button></article>`).join('')}</section>`);
+  return layout(`<section class="page-heading compact"><div><div class="eyebrow">REVIEW & IMPROVE</div><h1>错题本 <span class="title-count">${wrongQuestions.length} 道待复习</span></h1><p>把做错的题，变成真正会做的题。</p></div><button class="primary-button" data-action="review-all">${wrongQuestions.length ? '开始今日复习' : '去做练习'} ${icon('arrow', 16)}</button></section><section class="error-summary"><div class="error-summary-copy"><span class="card-eyebrow">SMART REVIEW</span><h3>${wrongQuestions.length ? `今天复习 ${Math.min(2, wrongQuestions.length)} 道，预计 12 分钟` : '还没有需要复习的错题'}</h3><p>${wrongQuestions.length ? '系统根据你的错误类型，优先安排薄弱知识点。' : '完成练习后，错题会自动收录到这里，并生成针对性解析。'}</p></div><div class="error-summary-visual"><div class="orbit-ring"></div><div class="error-orb">${icon('spark', 24)}</div></div></section><div class="wrong-toolbar"><div class="tab-group"><button class="active">全部 <span>${wrongQuestions.length}</span></button><button>待掌握 <span>${wrongQuestions.length}</span></button><button>已掌握 <span>0</span></button></div><button class="filter-button">${icon('target', 16)} 按学科筛选 ${icon('chevron', 14)}</button></div><section class="content-card wrong-list">${wrongQuestions.length ? wrongQuestions.map((question, index) => `<article class="wrong-item"><div class="wrong-index">0${index + 1}</div><div class="wrong-info"><div class="wrong-tags"><span class="subject-label ${question.subject === '数学' ? 'blue' : 'violet'}">${question.subject}</span><span>${question.tag}</span><span class="error-type">概念混淆</span></div><h3>${question.title}</h3><div class="wrong-answer"><span>你的答案：<b>${state.selectedQuestion === index ? '已查看' : '未作答'}</b></span><span>正确答案：<b>${question.options[question.answer]}</b></span></div></div><button class="secondary-button" data-action="review-question" data-question="${questions.indexOf(question)}">重做 ${icon('arrow', 15)}</button></article>`).join('') : '<div class="empty-state"><div class="empty-state-icon">✓</div><h3>错题本还是空的</h3><p>先完成一套练习，做错的题会自动保存下来。</p><button class="primary-button" data-page="practice">开始闯关练习 →</button></div>'}</section>`);
 }
 
 function profilePage() {
-  return layout(`<section class="page-heading compact"><div><div class="eyebrow">MY LEARNING SPACE</div><h1>我的 <span class="title-count">成长记录</span></h1><p>每一点积累，都会在未来发光。</p></div><button class="ghost-button" data-action="show-toast" data-toast="设置功能即将开放">${icon('settings', 16)} 设置</button></section><section class="profile-banner"><div class="profile-avatar-large">林</div><div class="profile-name"><span class="level-pill">Lv.3 探索新星</span><h2>林小满</h2><p>初二 · 已加入启明学习 32 天</p></div><div class="profile-quote">“慢慢来，比较快。”<span>— 你的学习座右铭</span></div></section><section class="stats-grid profile-stats">${statCard('clock', '累计学习时长', '42h 18m', '保持稳定节奏', 'blue')}${statCard('target', '掌握知识点', '86', '超过班级平均 12%', 'mint')}${statCard('trophy', '获得勋章', '6', '再解锁 3 枚', 'yellow')}</section><div class="profile-grid"><section class="content-card badges-card"><div class="card-heading"><div><span class="card-eyebrow">BADGES</span><h3>我的勋章</h3></div><button class="text-button">查看全部 ${icon('chevron', 15)}</button></div><div class="badge-list"><div class="badge-item earned"><div>🔥</div><strong>连续学习</strong><span>7 天</span></div><div class="badge-item earned"><div>🎯</div><strong>精准答题</strong><span>正确率 90%</span></div><div class="badge-item earned"><div>📖</div><strong>阅读新星</strong><span>完成 12 篇</span></div><div class="badge-item locked"><div>${icon('lock', 21)}</div><strong>百题斩</strong><span>还差 28 题</span></div></div></section><section class="content-card weekly-card"><div class="card-heading"><div><span class="card-eyebrow">THIS WEEK</span><h3>学习热力</h3></div><span class="muted-label">过去 7 天</span></div><div class="week-chart"><div class="chart-y"><span>60m</span><span>30m</span><span>0</span></div><div class="chart-main"><div class="chart-bars">${[42, 68, 35, 82, 58, 30, 74].map((value, index) => `<div class="chart-col"><span class="bar ${index === 3 ? 'today' : ''}" style="height:${value}%"></span><small>${['四','五','六','日','一','二','三'][index]}</small></div>`).join('')}</div></div></div></section></div>`);
+  return layout(`<section class="page-heading compact"><div><div class="eyebrow">MY LEARNING SPACE</div><h1>我的 <span class="title-count">成长记录</span></h1><p>每一点积累，都会在未来发光。</p></div><button class="ghost-button" data-action="show-toast" data-toast="设置功能即将开放">${icon('settings', 16)} 设置</button></section><section class="profile-banner"><div class="profile-avatar-large">${USER_INITIAL}</div><div class="profile-name"><span class="level-pill">Lv.1 学习新芽</span><h2>${USER_NAME}</h2><p>${state.grade} · 新用户 · 刚开始学习</p></div><div class="profile-quote">“慢慢来，比较快。”<span>— 你的学习座右铭</span></div></section><section class="stats-grid profile-stats">${statCard('clock', '累计学习时长', '0m', '从今天开始积累', 'blue')}${statCard('target', '掌握知识点', '0', '完成诊断后更新', 'mint')}${statCard('trophy', '获得勋章', '0', '完成任务即可解锁', 'yellow')}</section><div class="profile-grid"><section class="content-card badges-card"><div class="card-heading"><div><span class="card-eyebrow">BADGES</span><h3>我的勋章</h3></div><button class="text-button">查看全部 ${icon('chevron', 15)}</button></div><div class="badge-list"><div class="badge-item locked"><div>${icon('lock', 21)}</div><strong>连续学习</strong><span>完成第1天解锁</span></div><div class="badge-item locked"><div>${icon('lock', 21)}</div><strong>精准答题</strong><span>完成10题解锁</span></div><div class="badge-item locked"><div>${icon('lock', 21)}</div><strong>阅读新星</strong><span>完成首篇阅读</span></div><div class="badge-item locked"><div>${icon('lock', 21)}</div><strong>百题斩</strong><span>完成100题解锁</span></div></div></section><section class="content-card weekly-card"><div class="card-heading"><div><span class="card-eyebrow">THIS WEEK</span><h3>学习热力</h3></div><span class="muted-label">过去 7 天</span></div><div class="week-chart"><div class="chart-y"><span>60m</span><span>30m</span><span>0</span></div><div class="chart-main"><div class="chart-bars">${[0, 0, 0, 0, 0, 0, 0].map((value, index) => `<div class="chart-col"><span class="bar ${index === 6 ? 'today' : ''}" style="height:${value}%"></span><small>${['四','五','六','日','一','二','三'][index]}</small></div>`).join('')}</div></div></div></section></div>`);
 }
 
 function homeFoundationCard() {
@@ -1405,16 +1415,25 @@ function bindEvents() {
       return render();
     }
     if (action === 'speak-text') {
+      const text = element.dataset.speak?.trim();
+      if (!text) return showToast('暂无可播放内容');
+      const language = element.dataset.speakLang || 'en-US';
+      const rate = Number(element.dataset.speakRate) || 0.82;
+      if (globalThis.AndroidBridge?.speakText) {
+        try {
+          globalThis.AndroidBridge.speakText(text, language, rate);
+          trackEvent('speak_text', { contentType: text.split(' ').length > 2 ? 'example' : 'word', platform: 'android' });
+          return showToast(text.split(' ').length > 2 ? '正在用手机播放例句' : `正在用手机播放：${text}`);
+        } catch {}
+      }
       const speech = window.speechSynthesis;
       const Utterance = window.SpeechSynthesisUtterance;
-      const text = element.dataset.speak?.trim();
       if (!speech || !Utterance) return showToast('当前浏览器暂不支持语音播放，请使用系统浏览器打开');
-      if (!text) return showToast('暂无可播放内容');
       const speak = () => {
         speech.cancel();
         const utterance = new Utterance(text);
-        utterance.lang = element.dataset.speakLang || 'en-US';
-        utterance.rate = Number(element.dataset.speakRate) || 0.82;
+        utterance.lang = language;
+        utterance.rate = rate;
         const voices = speech.getVoices();
         const voice = voices.find((item) => item.lang?.toLowerCase().startsWith(utterance.lang.slice(0, 2).toLowerCase()));
         if (voice) utterance.voice = voice;
