@@ -799,30 +799,42 @@ function toolPanel(subject) {
   return '';
 }
 
+const lessonExplanationCatalog = [
+  { match: ['有理数混合运算'], title: '有理数混合运算', intro: '有理数混合运算的关键是先判断运算顺序，再处理符号和括号。', definition: '先乘方，再乘除，最后加减；同级运算从左到右。', points: ['先看括号，确定最里面的一层先算什么。', '没有括号时按“乘方→乘除→加减”的顺序计算。', '每一步都写清符号，最后用估算检查结果是否合理。'], example: '例如：-3 + 2×(-4)，先算乘法 2×(-4)=-8，再算 -3-8=-11。', mistake: '不能把 -3 + 2 先算，也不能把负号和减号混在一起。', check: '小检查：计算 -5 + 3×(-2) 时，第一步应该先算哪一部分？' },
+  { match: ['整式加减与去括号'], title: '整式加减与去括号', intro: '整式加减的本质是合并同类项，去括号时最容易错在括号前的负号。', definition: '所含字母相同、相同字母的指数也相同的项，叫做同类项。', points: ['先去括号：括号前是“+”不变号，括号前是“-”全变号。', '再找同类项，只合并系数，字母和指数保持不变。', '合并后按题目要求整理成最简形式。'], example: '例如：3x+2x=5x，但 3x 与 3x² 不是同类项。', mistake: '去负号括号时只改变第一项符号，是最常见的错误。', check: '小检查：-(2a-3b) 去括号后应写成 -2a+3b。' },
+  { match: ['一次函数'], title: '一次函数的图象与性质', intro: '一次函数通常写成 y = kx + b。先看 k 和 b，再判断直线怎么变化。', definition: 'k 决定直线的增减方向，b 是图象与 y 轴的交点。', points: ['k>0 时，y 随 x 增大而增大；k<0 时，y 随 x 增大而减小。', '令 x=0 可得到 y=b，所以图象经过（0，b）。', '遇到图象上的点，直接把横、纵坐标代入解析式。'], example: 'y=2x+1 经过（a，5），代入得 5=2a+1，所以 a=2。', mistake: 'b 是纵截距，不是图象与 x 轴的交点；求 x 轴交点要令 y=0。', check: '小检查：y=-3x+2 的图象从左到右上升还是下降？' },
+  { match: ['二元一次方程组'], title: '二元一次方程组', intro: '方程组要找到两个未知数的共同解，核心是消元：先消掉一个未知数。', definition: '同时满足方程组中每一个方程的未知数取值，叫做方程组的解。', points: ['选择代入消元或加减消元，让一个未知数先消失。', '求出一个未知数后，必须代回原方程求另一个。', '把两个结果代回任意一个原方程进行检验。'], example: '若 x+y=5、x-y=1，两式相加得 2x=6，所以 x=3，再得 y=2。', mistake: '加减消元时要连同等式两边一起乘，不能只改一边。', check: '小检查：求出 x 后，为什么还要代回方程组？' },
+  { match: ['三角形的边与角', '三角形全等'], title: '三角形的边与角', intro: '三角形题先分清边、角和对应关系，再选择内角和、全等判定等方法。', definition: '三角形内角和为180°；全等三角形的对应边、对应角分别相等。', points: ['先在图上标出已知边和角，找出题目真正要求的量。', '求角优先使用内角和、外角性质或平行线角关系。', '证明全等要写清判定条件，如 SSS、SAS、ASA 或 AAS。'], example: '已知三角形两个角为50°和60°，第三个角为180°-50°-60°=70°。', mistake: 'SSA 不能直接判定三角形全等；对应边、对应角也不能写错顺序。', check: '小检查：三角形中已知两个角，第三个角应该用什么关系求？' },
+  { match: ['二次根式'], title: '二次根式的化简与运算', intro: '二次根式先判断有意义，再提取完全平方因式，最后合并同类根式。', definition: '√a 表示 a 的算术平方根，要求 a≥0；√a·√b=√(ab)。', points: ['先把被开方数分解，找出完全平方因式。', '根号外的数相乘，根号内的数相乘，注意定义域。', '只有被开方数相同的根式才能像同类项一样合并。'], example: '√12=√(4×3)=2√3；2√3+√3=3√3。', mistake: '√(a+b) 一般不等于 √a+√b，不能把根号拆开。', check: '小检查：√18 化简后是多少？' },
+  { match: ['一元二次方程'], title: '一元二次方程的解法', intro: '先把方程整理成 ax²+bx+c=0，再根据结构选择因式分解、配方法或公式法。', definition: '形如 ax²+bx+c=0（a≠0）的方程叫一元二次方程。', points: ['先移项并合并同类项，整理成标准形式。', '能因式分解时优先用“两个因式等于0”求解。', '公式法中先算 Δ=b²-4ac，再整体代入求根公式。'], example: 'x²-5x+6=0 可分解为 (x-2)(x-3)=0，所以 x=2 或 x=3。', mistake: '求根公式的分母是整个 2a，不能漏掉括号。', check: '小检查：使用公式法前，为什么要先确定 a、b、c？' },
+  { match: ['二次函数'], title: '二次函数的图象与性质', intro: '二次函数 y=ax²+bx+c 先看开口方向，再找顶点、对称轴和与坐标轴的交点。', definition: 'a>0 时抛物线开口向上，a<0 时开口向下；顶点是最值所在的位置。', points: ['a 决定开口方向和宽窄，|a|越大图象越窄。', '用配方法或公式 x=-b/(2a) 找对称轴。', '结合顶点、对称轴和截距判断函数增减和最值。'], example: 'y=(x-2)²+1 的顶点为（2，1），开口向上，最小值为1。', mistake: '顶点式 y=a(x-h)²+k 的顶点是（h，k），不是（-h，k）。', check: '小检查：y=-(x+1)²+3 的顶点和开口方向是什么？' },
+  { match: ['圆的性质与切线', '圆的性质'], title: '圆的性质与切线判定', intro: '圆的题先找半径、直径、圆心角和切线，再连接圆心与切点建立直角关系。', definition: '切线与过切点的半径垂直；同弧所对圆周角等于圆心角的一半。', points: ['看到切线，连接圆心和切点，得到90°。', '同弧对应的圆周角相等，直径所对圆周角为90°。', '计算周长、面积时先确认题目给的是半径还是直径。'], example: '若半径为3，圆周长 C=2πr=6π，面积 S=πr²=9π。', mistake: '直径是半径的2倍，面积不能写成 πd²。', check: '小检查：证明一条直线是圆的切线，通常要找出什么角？' },
+  { match: ['相似判定与比例计算', '相似三角形'], title: '相似三角形', intro: '相似三角形形状相同但大小可能不同，对应角相等、对应边成比例。', definition: '相似三角形的对应边比相等；相似比为 k 时，周长比为 k、面积比为 k²。', points: ['先按角的关系确定对应顶点，再写对应边比例。', '利用 AA、SAS 或 SSS 判定相似。', '列比例时对应边必须顺序一致，求出未知量后检查单位。'], example: '相似比为2的两个三角形，若小三角形面积为5，大三角形面积为20。', mistake: '面积比不是相似比，而是相似比的平方。', check: '小检查：相似比为3时，面积比是多少？' },
+  { match: ['锐角三角函数'], title: '锐角三角函数', intro: '在直角三角形中，先确定目标锐角，再分清对边、邻边和斜边。', definition: 'sin A=对边/斜边，cos A=邻边/斜边，tan A=对边/邻边。', points: ['斜边是直角所对的边，也是三边中最长的一边。', '先写函数关系式，再把已知边和未知边对应进去。', '同一个锐角的 sin、cos、tan 要使用同一组边。'], example: '若对边为3、斜边为5，则 sin A=3/5。', mistake: '邻边不包括斜边；判断对边和邻边一定要以目标角为准。', check: '小检查：tan A 的分子和分母分别是哪两条边？' },
+  { match: ['一般过去时', '过去时'], title: '一般过去时', intro: '题目说的是已经发生的事情，先找过去时间，再把动词变成过去式。', definition: '一般过去时表示过去某个时间发生的动作或存在的状态。', points: ['yesterday、last weekend、ago 等词常提示过去时间。', '规则动词通常加-ed，不规则动词要记住变化。', '疑问句出现 did 后，后面的动词要变回原形。'], example: 'last weekend 提示过去，所以 go 要变成 went。', mistake: 'did 已经表示过去，不能写 did went，应写 Did you go...? ', check: '小检查：She ___ to school yesterday，动词 go 应填什么？' },
+  { match: ['现在完成时'], title: '现在完成时', intro: '现在完成时把过去发生的动作和现在联系起来，结构是 have/has + 过去分词。', definition: 'have/has + done，可表示经历、完成或从过去持续到现在的动作。', points: ['I/you/we/they 用 have，he/she/it 用 has。', 'already、yet、ever、never、since、for 常是提示词。', '疑问句和否定句中，过去分词形式保持不变。'], example: 'I have lived here for three years，表示从过去一直住到现在。', mistake: 'have 后面要接过去分词，不能直接接动词原形。', check: '小检查：She has ___ her homework，finish 应变成什么？' },
+  { match: ['定语从句'], title: '定语从句', intro: '定语从句放在名词后面，用 who、which、that 等关系词补充说明这个名词。', definition: '先行词 + 关系词 + 从句；关系词在从句中代替先行词。', points: ['先行词是人常用 who，物常用 which，that 两者都可。', '关系词后面要接一个成分不完整的句子。', '先找先行词，再判断关系词在从句中作主语还是宾语。'], example: 'The boy who is singing is my brother，who 指代 the boy。', mistake: '关系词已经代替先行词，后面的从句不能再重复同一个主语。', check: '小检查：This is the book ___ I bought yesterday，关系词可填什么？' },
+  { match: ['被动语态'], title: '被动语态', intro: '当我们更关心“谁被做了什么”，或不知道动作执行者时，就使用被动语态。', definition: '主语 + be + 过去分词；时态变化主要体现在 be 动词上。', points: ['先找主动句的宾语，把它放到被动句主语位置。', '根据原句时态改变 be，主要动词改为过去分词。', '需要说明动作执行者时，在句末加 by + 人。'], example: 'People speak English here. → English is spoken here.', mistake: '被动语态不能只写过去分词，必须有相应形式的 be。', check: '小检查：一般过去时被动语态的 be 用 was/were。' },
+  { match: ['受力分析', '力与运动'], title: '力与运动', intro: '力不是让物体必须运动的原因，而是改变物体运动状态的原因。', definition: '运动状态包括速度大小或方向；合力不为0时，运动状态会发生改变。', points: ['先找研究对象，再列出它实际受到的力。', '常见力有重力、支持力、摩擦力和拉力，方向要画准确。', '匀速直线运动时合力可能为0，但物体仍然可能受到多个力。'], example: '水平桌面上的书受到竖直向下的重力和竖直向上的支持力。', mistake: '不能因为物体在运动就认为它一定受到一个向前的力。', check: '小检查：画受力图时，力的箭头应该从哪里出发？' },
+  { match: ['密度公式'], title: '质量与密度', intro: '密度表示物质单位体积的质量，解决题目时先统一单位，再选择公式。', definition: 'ρ=m/V，密度单位常用 kg/m³ 或 g/cm³。', points: ['写出已知量和单位，必要时先进行单位换算。', '同种物质密度通常不随质量和体积改变而改变。', '测量固体密度常用天平测质量、量筒或排水法测体积。'], example: '质量为54g、体积为20cm³，密度为54÷20=2.7g/cm³。', mistake: '密度公式中 m 是质量，V 是体积，不能把两者位置写反。', check: '小检查：物体质量相同，体积越大，密度一定越大吗？' },
+  { match: ['欧姆定律'], title: '欧姆定律', intro: '在同一导体中，电流、电压和电阻之间满足 I=U/R。', definition: '通过导体的电流与导体两端电压成正比，与电阻成反比。', points: ['先画出电路并确认研究对象是哪一个用电器。', '统一电压、电流、电阻的单位，再代入公式。', '改变电压或电阻时，注意题目是否说明导体条件不变。'], example: '电压为6V、电阻为3Ω时，电流 I=6÷3=2A。', mistake: '公式变形时要保持 I、U、R 的对应关系，不能把 R 写成 U×I。', check: '小检查：电阻不变时，电压增大，电流如何变化？' },
+  { match: ['化学方程式'], title: '化学方程式配平', intro: '配平的本质是遵守质量守恒，让反应前后每种原子的个数相等。', definition: '化学方程式左、右两边各元素原子种类和数目相等。', points: ['先写对反应物和生成物的化学式，再配平。', '只能修改化学式前的化学计量数，不能改右下角下标。', '配平后检查各元素原子数，并注明条件和状态。'], example: 'H₂+O₂→H₂O 配平为 2H₂+O₂=2H₂O。', mistake: '修改化学式下标会改变物质本身，属于化学式书写错误。', check: '小检查：配平时可以修改 H₂O 中的“2”吗？' },
+  { match: ['显微镜与细胞结构'], title: '显微镜与细胞结构', intro: '观察细胞时先会用显微镜，再根据结构和功能理解细胞。', definition: '细胞是生物体结构和功能的基本单位；植物细胞通常有细胞壁、细胞膜、细胞质、细胞核和液泡等结构。', points: ['显微镜观察先低倍镜，再调焦和换高倍镜。', '细胞核内含遗传物质，细胞膜控制物质进出。', '植物细胞的叶绿体与光合作用有关，液泡中常有细胞液。'], example: '观察到的物像是倒像，玻片向右移动，物像会向左移动。', mistake: '显微镜放大的是物像，不是把细胞本身变大。', check: '小检查：细胞中控制物质进出的结构是什么？' },
+  { match: ['鸦片战争'], title: '鸦片战争与近代中国的开端', intro: '历史学习先看背景，再看经过、结果和影响，避免只背一个年份。', definition: '鸦片战争后签订《南京条约》，中国开始沦为半殖民地半封建社会。', points: ['背景包括英国向中国走私鸦片和清政府禁烟。', '战争失败后签订不平等条约，中国主权和领土受到破坏。', '历史意义要从社会性质、社会矛盾和近代化进程分点回答。'], example: '林则徐虎门销烟是反抗鸦片危害的正义行动，也是战争爆发的导火线之一。', mistake: '不能把“开始沦为”与“完全沦为”混淆，社会性质变化是逐步加深的。', check: '小检查：评价历史事件时要结合什么背景？' },
+  { match: ['经纬网定位'], title: '经纬网定位与方向判断', intro: '地理读图先定位，再判断方向和相对位置，最后联系自然条件分析。', definition: '经线指示南北方向，纬线指示东西方向；经纬度可以确定地点位置。', points: ['先看纬度判断南北，再看经度判断东西。', '同一条经线南北延伸，同一条纬线东西延伸。', '读图时结合图例、比例尺和指向标，不能只凭图面远近判断。'], example: '纬度向北增大说明地点在北半球，向东经度增大说明地点位于更偏东的位置。', mistake: '经纬线方向不要记反：经线南北、纬线东西。', check: '小检查：判断一个地点在南北半球要看什么？' },
+  { match: ['宪法是国家的根本法', '宪法教育'], title: '宪法是国家的根本法', intro: '道法材料题先找行为，再联系宪法的地位、原则和保障作用。', definition: '宪法是国家的根本法，在国家法律体系中具有最高的法律效力。', points: ['宪法规定国家生活中最根本、最重要的问题。', '普通法律依据宪法制定，不得同宪法相抵触。', '青少年可以通过学习宪法、尊重权利、履行义务参与法治建设。'], example: '当材料出现公民权利受到侵害时，可以从宪法保障公民基本权利角度作答。', mistake: '宪法不是只和国家机关有关，也与每个人的生活和权利密切相关。', check: '小检查：为什么说宪法具有最高的法律效力？' },
+];
+
 function getLessonExplanation(subjectName, knowledgePoint, courseTitle) {
   const text = `${subjectName} ${knowledgePoint} ${courseTitle}`;
-  if (text.includes('一次函数')) return {
-    title: '先理解：一次函数的图象与性质',
-    intro: '一次函数通常写成 y = kx + b。先看 k 和 b，再判断图象怎么变化。',
-    points: ['k 决定直线的倾斜方向：k > 0 向右上升，k < 0 向右下降。', 'b 是图象与 y 轴的交点，代入 x = 0 就能找到它。', '遇到点在图象上，直接把点的横、纵坐标代入解析式。'],
-    check: '小检查：y = 2x + 1 经过（a，5），把 x 换成 a、y 换成 5，就能得到 5 = 2a + 1。',
-  };
-  if (text.includes('一般过去时') || text.includes('过去时')) return {
-    title: '先理解：一般过去时',
-    intro: '题目说的是已经发生的事情，先找过去时间，再把动词变成过去式。',
-    points: ['yesterday、last weekend、ago 等词常常提示过去时间。', '规则动词通常加 -ed，不规则动词要记住变化。', '疑问句里出现 did，后面的动词要变回原形。'],
-    check: '小检查：last weekend 提示过去，所以 go 要变成 went。',
-  };
-  if (text.includes('力与运动') || text.includes('受力分析')) return {
-    title: '先理解：力与运动',
-    intro: '力不是让物体“必须运动”的原因，而是改变物体运动状态的原因。',
-    points: ['先找研究对象，再把它受到的力一个个列出来。', '运动状态包括速度大小或方向，任何一个改变都算改变运动状态。', '画受力图时，力的箭头要从物体中心指向受力方向。'],
-    check: '小检查：物体做匀速直线运动时，合力可能为 0，不代表物体没有受到力。',
-  };
+  const matched = lessonExplanationCatalog.find((item) => item.match.some((keyword) => text.includes(keyword)));
+  if (matched) return { ...matched, title: `先理解：${matched.title}` };
   return {
     title: `先理解：${courseTitle || knowledgePoint || `${subjectName}基础知识点`}`,
     intro: `这道题先回到“${knowledgePoint || '基础知识点'}”的最核心定义，不急着做难题。`,
+    definition: '先明确知识点的定义、适用条件和题目要求，再开始列式或组织答案。',
     points: ['先圈出题目中的关键词和已知条件。', '用一句自己的话说出这个知识点在讲什么。', '把已知条件逐个对应到定义、公式或判断方法。'],
+    mistake: '不要只看答案，必须说清楚每一步为什么这样做。',
     check: '小检查：合上题目后，试着用自己的话复述一遍刚才的知识点。',
   };
 }
@@ -929,7 +941,7 @@ function learnPage() {
   const focusIndex = focusText ? Math.max(0, lessons.findIndex((lesson) => lesson[1].includes(focusText) || focusText.includes(lesson[1]))) : 0;
   const explanation = getLessonExplanation(current.name, focusText, state.focusCourseTitle);
   const focusCard = focusText ? `<div class="knowledge-focus"><div class="focus-knowledge-icon">${icon('target', 18)}</div><div class="focus-knowledge-copy"><span>AI 已定位学习点</span><strong>${escapeHtml(focusText)}</strong><small>从基础讲解开始 · 预计 8 分钟</small></div><button class="text-button" data-action="start-lesson" data-lesson="${escapeHtml(state.focusCourseTitle || focusText)}">开始讲解 ${icon('arrow', 14)}</button></div>` : '';
-  const explanationCard = focusText && state.focusLessonOpen ? `<section class="lesson-explanation"><div class="lesson-explanation-head"><div><span class="card-eyebrow">FOUNDATION EXPLANATION</span><h3>${escapeHtml(explanation.title)}</h3></div><span class="lesson-time">8 min</span></div><p class="lesson-intro">${escapeHtml(explanation.intro)}</p><div class="lesson-points">${explanation.points.map((point, index) => `<div><span>${index + 1}</span><p>${escapeHtml(point)}</p></div>`).join('')}</div><div class="lesson-check"><strong>学会了吗？</strong><span>${escapeHtml(explanation.check)}</span></div><button class="secondary-button" data-action="start-practice" data-subject="${current.id}">马上做一道基础题 ${icon('arrow', 15)}</button></section>` : '';
+  const explanationCard = focusText && state.focusLessonOpen ? `<section class="lesson-explanation"><div class="lesson-explanation-head"><div><span class="card-eyebrow">FOUNDATION EXPLANATION</span><h3>${escapeHtml(explanation.title)}</h3></div><span class="lesson-time">8 min</span></div><p class="lesson-intro">${escapeHtml(explanation.intro)}</p>${explanation.definition ? `<div class="lesson-definition"><span>核心定义</span><p>${escapeHtml(explanation.definition)}</p></div>` : ''}<div class="lesson-points">${explanation.points.map((point, index) => `<div><span>${index + 1}</span><p>${escapeHtml(point)}</p></div>`).join('')}</div>${explanation.example || explanation.mistake ? `<div class="lesson-insight-grid">${explanation.example ? `<div class="lesson-insight example"><strong>例题提醒</strong><p>${escapeHtml(explanation.example)}</p></div>` : ''}${explanation.mistake ? `<div class="lesson-insight mistake"><strong>易错提醒</strong><p>${escapeHtml(explanation.mistake)}</p></div>` : ''}</div>` : ''}<div class="lesson-check"><strong>学会了吗？</strong><span>${escapeHtml(explanation.check)}</span></div><button class="secondary-button" data-action="start-practice" data-subject="${current.id}">马上做一道基础题 ${icon('arrow', 15)}</button></section>` : '';
   return layout(`
     <section class="page-heading compact"><div><div class="eyebrow">LEARNING LIBRARY</div><h1>学知识 <span class="title-count">${subjects.length} 个学科</span></h1><p>${focusText ? '先把这个基础知识点学会，再慢慢往上走。' : '选择教材与学科，开启你的专属学习路径。'}</p></div><div class="learn-actions"><button class="ghost-button" data-action="show-report">${icon('spark', 16)} 学情报告</button></div></section>
     <section class="filter-bar"><div class="select-wrap"><label>年级</label><select data-filter="grade"><option ${state.grade === '初一' ? 'selected' : ''}>初一</option><option ${state.grade === '初二' ? 'selected' : ''}>初二</option><option ${state.grade === '初三' ? 'selected' : ''}>初三</option></select></div><div class="select-wrap"><label>学期</label><select data-filter="semester"><option ${state.semester === '上册' ? 'selected' : ''}>上册</option><option ${state.semester === '下册' ? 'selected' : ''}>下册</option></select></div><div class="select-wrap wide"><label>教材版本</label><select data-filter="textbook">${(textbookOptions[current.id] || ['人教版']).map((book) => `<option ${state.textbook === book ? 'selected' : ''}>${book}</option>`).join('')}</select></div><div class="filter-summary"><span class="green-dot"></span>已为你匹配 <strong>${state.grade} · ${state.semester} · ${state.textbook}</strong></div></section>
