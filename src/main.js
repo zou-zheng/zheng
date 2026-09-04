@@ -1759,8 +1759,8 @@ function bindEvents() {
       return;
     }
     if (action === 'start-lesson') {
-      state.focusKnowledgePoint = state.focusKnowledgePoint || element.dataset.lesson || '';
-      state.focusCourseTitle = element.dataset.lesson || state.focusCourseTitle || state.focusKnowledgePoint;
+      state.focusKnowledgePoint = element.dataset.lesson || '';
+      state.focusCourseTitle = element.dataset.lesson || '';
       state.focusLessonOpen = true;
       state.page = 'learn';
       trackEvent('open_lesson', { knowledgePoint: state.focusKnowledgePoint });
