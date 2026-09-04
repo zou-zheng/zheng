@@ -411,6 +411,8 @@ Object.entries(extraPracticeQuestions).concat(Object.entries(examPracticeQuestio
 
 const defaultState = {
   profileVersion: 2,
+  profileComplete: false,
+  setupError: '',
   page: 'home',
   selectedSubject: 'math',
   grade: '初二',
@@ -455,7 +457,7 @@ const defaultState = {
   referenceGrade: '初二',
   referenceSubject: 'math',
   settings: {
-    displayName: '小妹',
+    displayName: '',
     dailyGoal: 15,
     defaultSubject: 'math',
     speechRate: 0.82,
@@ -495,7 +497,7 @@ function loadState() {
     const isLegacyDemoProfile = hasSavedProfile && !Object.prototype.hasOwnProperty.call(saved, 'profileVersion');
     const shouldInitializeNewProfile = !hasSavedProfile || isLegacyDemoProfile;
     if (shouldInitializeNewProfile) localStorage.removeItem('minghui-analytics-user-id');
-    const nextState = { ...defaultState, ...(shouldInitializeNewProfile ? {} : saved), profileVersion: PROFILE_SCHEMA_VERSION, page: 'home', toast: '', selectedAnswer: null, questionAnswered: false, aiImageData: null, aiImageName: '' };
+    const nextState = { ...defaultState, ...(shouldInitializeNewProfile ? {} : saved), profileVersion: PROFILE_SCHEMA_VERSION, page: saved?.profileComplete === true ? 'home' : 'setup', setupError: '', toast: '', selectedAnswer: null, questionAnswered: false, aiImageData: null, aiImageName: '' };
     if (!nextState.practiceSetBySubject || typeof nextState.practiceSetBySubject !== 'object' || Array.isArray(nextState.practiceSetBySubject)) nextState.practiceSetBySubject = {};
     if (!nextState.completedPracticeSets || typeof nextState.completedPracticeSets !== 'object' || Array.isArray(nextState.completedPracticeSets)) nextState.completedPracticeSets = {};
     if (!nextState.diagnosticAnswers || typeof nextState.diagnosticAnswers !== 'object' || Array.isArray(nextState.diagnosticAnswers)) nextState.diagnosticAnswers = {};
@@ -506,7 +508,9 @@ function loadState() {
     else nextState.settings = { ...defaultState.settings, ...nextState.settings };
     if (![10, 15, 20, 30].includes(Number(nextState.settings.dailyGoal))) nextState.settings.dailyGoal = defaultState.settings.dailyGoal;
     if (!subjects.some((subject) => subject.id === nextState.settings.defaultSubject)) nextState.settings.defaultSubject = defaultState.settings.defaultSubject;
-    nextState.settings.displayName = String(nextState.settings.displayName || DEFAULT_USER_NAME).trim().slice(0, 12) || DEFAULT_USER_NAME;
+    nextState.settings.displayName = String(nextState.settings.displayName || '').trim().slice(0, 12);
+    nextState.profileComplete = nextState.profileComplete === true && Boolean(nextState.settings.displayName);
+    if (!nextState.profileComplete) nextState.page = 'setup';
     if (typeof nextState.aiQuestion !== 'string' || /<\/?\s*(textarea|div|section|button)\b/i.test(nextState.aiQuestion)) nextState.aiQuestion = '';
     return nextState;
   } catch {
@@ -794,6 +798,10 @@ function practiceCollection(subject) {
   const bankCount = getSubjectBankCount(subject.id);
   const visibleSets = Array.from({ length: currentSet }, (_, index) => index + 1);
   return `<section class="content-card practice-collection"><div class="card-heading"><div><span class="card-eyebrow">CHALLENGE COLLECTION</span><h3>闯关合集</h3></div><span class="collection-count">已完成 ${completed} 套</span></div><p class="collection-subtitle">每套 10 题，完成后自动开启下一套</p><div class="bank-size-note">当前${subject.name}题库 ${bankCount} 题 · 含基础巩固与历年题型风格</div><div class="collection-list">${visibleSets.map((setNumber) => `<div class="collection-item ${setNumber === currentSet ? 'current' : 'completed'}"><span class="collection-status">${setNumber === currentSet ? icon('play', 11) : icon('check', 11)}</span><div><strong>第 ${setNumber} 套 · ${subject.name}</strong><small>${setNumber === currentSet ? `学习中 · 已完成 ${currentProgress} / 10` : '已完成 · 可继续巩固'}</small></div><span class="collection-arrow">${setNumber === currentSet ? '进行中' : '✓'}</span></div>`).join('')}</div>${currentSet > 4 ? `<small class="collection-more">已连续闯关 ${currentSet} 套，全部记录可在列表中查看</small>` : ''}</section>`;
+}
+
+function setupPage() {
+  return `<main class="setup-shell"><section class="setup-card"><div class="setup-brand"><span class="setup-brand-mark">✦</span><div><strong>${BRAND_NAME}</strong><small>初中全科学习伴侣</small></div></div><div class="setup-welcome"><span class="setup-eyebrow">WELCOME TO YOUR STUDY SPACE</span><h1>先告诉我，<br/><em>怎么称呼你？</em></h1><p>设置一个学习昵称，之后的学习进度都会和它一起保存。</p></div><label class="setup-name-field"><span>学习昵称</span><input id="setup-name" type="text" maxlength="12" placeholder="例如：小妹" autocomplete="nickname" autofocus/>${state.setupError ? `<small class="setup-error">${escapeHtml(state.setupError)}</small>` : ''}<small>昵称只保存在本机，不会因为覆盖安装而改变。</small></label><button class="primary-button setup-submit" data-action="complete-profile-setup">开始学习 ${icon('arrow', 16)}</button><p class="setup-tip">以后可以在“我的 → 个人设置”里修改。</p></section></main>`;
 }
 
 function layout(content) {
@@ -1171,7 +1179,7 @@ function augmentRenderedPage() {
 }
 
 function render() {
-  const page = state.page === 'learn' ? learnPage() : state.page === 'practice' ? practicePage() : state.page === 'self-test' ? selfTestPage() : state.page === 'reference' ? referencePage() : state.page === 'ai' ? aiPage() : state.page === 'wrong' ? wrongPage() : state.page === 'profile' ? profilePage() : state.page === 'settings' ? settingsPage() : state.page === 'diagnostic' ? diagnosticPage() : state.page === 'report' ? reportPage() : homePage();
+  const page = state.page === 'setup' ? setupPage() : state.page === 'learn' ? learnPage() : state.page === 'practice' ? practicePage() : state.page === 'self-test' ? selfTestPage() : state.page === 'reference' ? referencePage() : state.page === 'ai' ? aiPage() : state.page === 'wrong' ? wrongPage() : state.page === 'profile' ? profilePage() : state.page === 'settings' ? settingsPage() : state.page === 'diagnostic' ? diagnosticPage() : state.page === 'report' ? reportPage() : homePage();
   document.querySelector('#app').innerHTML = page.replaceAll('启明学习', BRAND_NAME).replaceAll('启明 AI', AI_BRAND_NAME);
   augmentRenderedPage();
   bindEvents();
@@ -1293,6 +1301,23 @@ function bindEvents() {
   }));
   document.querySelectorAll('[data-action]').forEach((element) => element.addEventListener('click', (event) => {
     const action = element.dataset.action;
+    if (action === 'complete-profile-setup') {
+      const name = document.querySelector('#setup-name')?.value.trim() || '';
+      if (!name) {
+        state.setupError = '请输入一个学习昵称，再开始学习。';
+        render();
+        return document.querySelector('#setup-name')?.focus();
+      }
+      state.settings = { ...defaultState.settings, ...state.settings, displayName: name.slice(0, 12) };
+      state.profileComplete = true;
+      state.setupError = '';
+      state.page = 'home';
+      trackEvent('complete_profile_setup');
+      saveState();
+      state.toast = `欢迎你，${getUserName()}，学习空间已经准备好了`;
+      render();
+      return;
+    }
     if (action === 'export-data') {
       const exportData = { app: BRAND_NAME, exportedAt: new Date().toISOString(), profile: { name: getUserName(), grade: state.grade, semester: state.semester, textbook: state.textbook }, learning: { points: state.points, streak: state.streak, todayProgress: state.todayProgress, wrongIds: state.wrongIds, completedPracticeSets: state.completedPracticeSets, diagnosticResults: state.diagnosticResults }, settings: state.settings };
       const link = document.createElement('a');
@@ -1735,6 +1760,9 @@ function bindEvents() {
       return showToast('已保存到错题本，之后会推送同类验证题');
     }
   }));
+  document.querySelector('#setup-name')?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') document.querySelector('[data-action="complete-profile-setup"]')?.click();
+  });
   document.querySelector('#ai-image-input')?.addEventListener('change', (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
