@@ -8,6 +8,7 @@ on:
       - 'minghui-android-source-v103.zip'
       - 'minghui-android-source-v104.zip'
       - 'minghui-android-source-v105.zip'
+      - 'minghui-android-source-v106.zip'
       - '.github/workflows/build-apk.yml'
 
 jobs:
@@ -21,7 +22,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Restore Android project
-        run: unzip -q minghui-android-source-v105.zip
+        run: unzip -q minghui-android-source-v106.zip
 
       - name: Restore stable signing key
         env:
