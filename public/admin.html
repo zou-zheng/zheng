@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>铭惠学习 · 使用日志</title>
+    <style>
+      :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; background: #f5f7fb; color: #1d2a44; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; }
+      button, input { font: inherit; }
+      .shell { max-width: 1180px; margin: 0 auto; padding: 36px 20px 60px; }
+      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+      .eyebrow { color: #6389df; font-size: 12px; font-weight: 800; letter-spacing: .16em; }
+      h1 { margin: 7px 0 0; font-size: clamp(28px, 4vw, 42px); }
+      h2 { margin: 0; font-size: 20px; }
+      p { color: #7888a6; }
+      .panel, .metric { background: #fff; border: 1px solid #e6ebf4; border-radius: 20px; box-shadow: 0 12px 35px rgba(43, 71, 120, .06); }
+      .login { width: min(420px, 100%); margin: 12vh auto; padding: 30px; }
+      .field { display: grid; gap: 8px; margin: 22px 0; color: #667895; font-size: 14px; font-weight: 700; }
+      input { width: 100%; border: 1px solid #dce4f1; border-radius: 12px; padding: 13px 14px; outline: none; }
+      input:focus { border-color: #5c87ef; box-shadow: 0 0 0 4px #eaf0ff; }
+      button { border: 0; border-radius: 12px; padding: 12px 17px; background: #467cf0; color: #fff; font-weight: 800; cursor: pointer; }
+      button.secondary { background: #edf2ff; color: #4671d6; }
+      button.danger { background: #fff0f0; color: #d45f69; }
+      .message { min-height: 22px; color: #d45f69; font-size: 14px; }
+      .hidden { display: none !important; }
+      .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+      .metric { padding: 20px; }
+      .metric span { display: block; color: #8190aa; font-size: 13px; }
+      .metric strong { display: block; margin-top: 8px; font-size: 30px; }
+      .grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 18px; margin-bottom: 18px; }
+      .panel { padding: 22px; overflow: hidden; }
+      .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
+      .chart { display: flex; align-items: end; gap: 7px; height: 190px; padding: 12px 0 26px; border-bottom: 1px solid #e8edf5; }
+      .bar-wrap { height: 100%; flex: 1; display: flex; flex-direction: column; justify-content: end; align-items: center; gap: 6px; min-width: 0; }
+      .bar { width: min(26px, 75%); min-height: 3px; border-radius: 7px 7px 2px 2px; background: linear-gradient(#79a0ff, #477cf0); }
+      .bar-label { color: #9aa8bf; font-size: 10px; transform: rotate(-45deg); white-space: nowrap; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { padding: 11px 8px; border-bottom: 1px solid #edf0f5; text-align: left; vertical-align: top; }
+      th { color: #8190aa; font-weight: 700; }
+      td { color: #40516f; }
+      .muted { color: #9aa8bf; }
+      .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; word-break: break-all; }
+      .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #eef4ff; color: #557edc; }
+      @media (max-width: 800px) { .metrics { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: 1fr; } .topbar { align-items: flex-start; } }
+      @media (max-width: 480px) { .shell { padding: 24px 12px 40px; } .metrics { gap: 8px; } .metric { padding: 14px; } .metric strong { font-size: 24px; } .panel { padding: 14px; } th, td { padding: 9px 5px; } }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <section id="login" class="login panel">
+        <div class="eyebrow">MINGHUI LEARNING · ADMIN</div>
+        <h1>使用日志后台</h1>
+        <p>只显示匿名统计和学习行为，不显示题目图片、姓名或答案原文。</p>
+        <form id="login-form">
+          <label class="field">管理员密码<input id="password" type="password" autocomplete="current-password" required /></label>
+          <div id="login-message" class="message"></div>
+          <button type="submit">登录查看</button>
+        </form>
+      </section>
+
+      <section id="dashboard" class="hidden">
+        <header class="topbar">
+          <div><div class="eyebrow">MINGHUI LEARNING · ANALYTICS</div><h1>使用日志</h1><p>查看学习功能被使用的情况，帮助调整课程和题目。</p></div>
+          <button id="logout" class="danger">退出登录</button>
+        </header>
+        <section id="metrics" class="metrics"></section>
+        <div class="grid">
+          <section class="panel"><div class="panel-head"><h2>最近 30 天活跃趋势</h2><span class="muted">事件数 / 用户数</span></div><div id="daily" class="chart"></div></section>
+          <section class="panel"><div class="panel-head"><h2>学科使用</h2></div><div id="subjects"></div></section>
+        </div>
+        <section class="panel" style="margin-bottom:18px"><div class="panel-head"><h2>功能使用次数</h2><button id="refresh" class="secondary">刷新</button></div><div id="event-types"></div></section>
+        <section class="panel"><div class="panel-head"><h2>最近匿名用户</h2><span class="muted">点击用户 ID 查看明细</span></div><div id="users"></div><div id="user-events" class="hidden" style="margin-top:22px"></div></section>
+      </section>
+    </main>
+    <script>
+      const $ = (selector) => document.querySelector(selector);
+      const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+      const formatNumber = (value) => new Intl.NumberFormat('zh-CN').format(Number(value || 0));
+      let token = sessionStorage.getItem('minghui-admin-token') || '';
+      async function api(path, options = {}) {
+        const headers = { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) };
+        const response = await fetch(path, { ...options, headers });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || `请求失败：${response.status}`);
+        return payload;
+      }
+      function showDashboard() { $('#login').classList.add('hidden'); $('#dashboard').classList.remove('hidden'); }
+      function renderTable(headers, rows, empty = '暂无数据') {
+        if (!rows.length) return `<p class="muted">${empty}</p>`;
+        return `<div style="overflow:auto"><table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+      }
+      function renderOverview(data) {
+        const totals = data.totals || {};
+        $('#metrics').innerHTML = [['累计事件', totals.totalEvents], ['匿名用户', totals.totalUsers], ['今日活跃', totals.activeToday], ['近 7 日活跃', totals.activeSevenDays]].map(([label, value]) => `<article class="metric"><span>${label}</span><strong>${formatNumber(value)}</strong></article>`).join('');
+        const daily = data.daily || [];
+        const max = Math.max(1, ...daily.map((item) => Number(item.count || 0)));
+        $('#daily').innerHTML = daily.length ? daily.map((item) => `<div class="bar-wrap" title="${escapeHtml(item.day)}：${item.count} 次，${item.users} 人"><div class="bar" style="height:${Math.max(3, Number(item.count || 0) / max * 145)}px"></div><span class="bar-label">${escapeHtml(item.day.slice(5))}</span></div>`).join('') : '<p class="muted">暂无近 30 天数据</p>';
+        $('#subjects').innerHTML = renderTable(['学科', '次数'], (data.subjects || []).map((item) => `<tr><td><span class="pill">${escapeHtml(item.subjectId || '未选择')}</span></td><td>${formatNumber(item.count)}</td></tr>`));
+        $('#event-types').innerHTML = renderTable(['行为', '次数', '最近发生'], (data.eventTypes || []).map((item) => `<tr><td class="code">${escapeHtml(item.eventName)}</td><td>${formatNumber(item.count)}</td><td class="muted">${escapeHtml(item.lastSeen || '')}</td></tr>`));
+        $('#users').innerHTML = renderTable(['匿名用户 ID', '事件数', '年级', '最近使用'], (data.recentUsers || []).map((item) => `<tr><td><button class="secondary user-button code" data-user-id="${escapeHtml(item.userId)}">${escapeHtml(item.userId)}</button></td><td>${formatNumber(item.eventCount)}</td><td>${escapeHtml(item.grade || '—')}</td><td class="muted">${escapeHtml(item.lastSeen || '')}</td></tr>`));
+        document.querySelectorAll('.user-button').forEach((button) => button.addEventListener('click', () => loadUserEvents(button.dataset.userId)));
+      }
+      async function loadOverview() { const data = await api('/api/admin/overview'); renderOverview(data); }
+      async function loadUserEvents(userId) {
+        const box = $('#user-events');
+        box.classList.remove('hidden');
+        box.innerHTML = `<h2>用户明细：<span class="code">${escapeHtml(userId)}</span></h2><p class="muted">加载中…</p>`;
+        try {
+          const data = await api(`/api/admin/events?userId=${encodeURIComponent(userId)}&limit=100`);
+          box.innerHTML = `<div class="panel-head"><h2>用户明细：<span class="code">${escapeHtml(userId)}</span></h2><button class="secondary" onclick="document.querySelector('#user-events').classList.add('hidden')">收起</button></div>` + renderTable(['时间', '行为', '页面', '学科', '年级'], (data.events || []).map((item) => `<tr><td class="muted">${escapeHtml(item.createdAt)}</td><td class="code">${escapeHtml(item.eventName)}</td><td>${escapeHtml(item.page || '—')}</td><td>${escapeHtml(item.subjectId || '—')}</td><td>${escapeHtml(item.grade || '—')}</td></tr>`));
+        } catch (error) { box.innerHTML = `<p class="message">${escapeHtml(error.message)}</p>`; }
+      }
+      $('#login-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        $('#login-message').textContent = '登录中…';
+        try {
+          const data = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password: $('#password').value }) });
+          token = data.token;
+          sessionStorage.setItem('minghui-admin-token', token);
+          $('#login-message').textContent = '';
+          showDashboard();
+          await loadOverview();
+        } catch (error) { $('#login-message').textContent = error.message; }
+      });
+      $('#refresh').addEventListener('click', () => loadOverview().catch((error) => alert(error.message)));
+      $('#logout').addEventListener('click', () => { token = ''; sessionStorage.removeItem('minghui-admin-token'); $('#dashboard').classList.add('hidden'); $('#login').classList.remove('hidden'); });
+      if (token) { showDashboard(); loadOverview().catch(() => { token = ''; sessionStorage.removeItem('minghui-admin-token'); $('#dashboard').classList.add('hidden'); $('#login').classList.remove('hidden'); }); }
+    </script>
+  </body>
+</html>
