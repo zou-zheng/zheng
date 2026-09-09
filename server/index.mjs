@@ -1,6 +1,7 @@
 import http from 'node:http';
 import path from 'node:path';
 import { createReadStream, mkdirSync, readFileSync, statSync } from 'node:fs';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -22,6 +23,9 @@ loadLocalEnv();
 const port = Number(process.env.PORT || process.env.AI_PORT || 3001);
 const aiProvider = String(process.env.AI_PROVIDER || 'openai').trim().toLowerCase();
 const apiKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
+const adminPassword = String(process.env.ADMIN_PASSWORD || '').trim();
+const adminSessions = new Map();
+const adminSessionLifetimeMs = 12 * 60 * 60 * 1000;
 const baseUrl = String(process.env.AI_BASE_URL || (aiProvider === 'deepseek' ? 'https://api.deepseek.com' : 'https://api.openai.com')).replace(/\/+$/, '');
 const model = process.env.AI_MODEL || (aiProvider === 'deepseek' ? 'deepseek-v4-flash' : process.env.OPENAI_MODEL || 'gpt-5.6-luna');
 const visionModel = process.env.AI_VISION_MODEL || (aiProvider === 'deepseek' ? 'deepseek-v4-flash-vision-exp' : model);
@@ -48,17 +52,20 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_user_events_user_time ON user_events(user_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_user_events_name_time ON user_events(event_name, created_at);
 `);
+const eventColumns = db.prepare('PRAGMA table_info(user_events)').all().map((column) => column.name);
+if (!eventColumns.includes('client_event_id')) db.exec('ALTER TABLE user_events ADD COLUMN client_event_id TEXT');
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_user_events_client_event_id ON user_events(client_event_id) WHERE client_event_id IS NOT NULL');
 const insertEvent = db.prepare(`
-  INSERT INTO user_events
-    (user_id, event_name, page, subject_id, grade, semester, textbook, metadata_json)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT OR IGNORE INTO user_events
+    (client_event_id, user_id, event_name, page, subject_id, grade, semester, textbook, metadata_json)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 `);
 
 function sendJson(response, status, body) {
   response.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   });
   response.end(JSON.stringify(body));
@@ -98,6 +105,7 @@ function serveStatic(request, response) {
       '.jpeg': 'image/jpeg',
       '.webp': 'image/webp',
       '.ico': 'image/x-icon',
+      '.m4a': 'audio/mp4',
     };
     response.writeHead(200, { 'Content-Type': contentTypes[path.extname(candidate).toLowerCase()] || 'application/octet-stream' });
     createReadStream(candidate).pipe(response);
@@ -105,6 +113,97 @@ function serveStatic(request, response) {
   } catch {
     return false;
   }
+}
+
+function safeSecretEquals(value, expected) {
+  const left = Buffer.from(String(value || ''));
+  const right = Buffer.from(String(expected || ''));
+  return left.length === right.length && timingSafeEqual(left, right);
+}
+
+function createAdminSession() {
+  const token = randomBytes(32).toString('hex');
+  adminSessions.set(token, Date.now() + adminSessionLifetimeMs);
+  return token;
+}
+
+function hasAdminAccess(request) {
+  if (!adminPassword) return false;
+  const authorization = String(request.headers.authorization || '');
+  const token = authorization.startsWith('Bearer ') ? authorization.slice(7).trim() : '';
+  const expiresAt = adminSessions.get(token);
+  if (!expiresAt) return false;
+  if (expiresAt <= Date.now()) {
+    adminSessions.delete(token);
+    return false;
+  }
+  adminSessions.set(token, Date.now() + adminSessionLifetimeMs);
+  return true;
+}
+
+function requireAdmin(request, response) {
+  if (!adminPassword) {
+    sendJson(response, 503, { error: 'ADMIN_PASSWORD is not configured' });
+    return false;
+  }
+  if (!hasAdminAccess(request)) {
+    sendJson(response, 401, { error: 'admin authentication required' });
+    return false;
+  }
+  return true;
+}
+
+function adminOverview() {
+  const totals = db.prepare(`
+    SELECT
+      COUNT(*) AS totalEvents,
+      COUNT(DISTINCT user_id) AS totalUsers,
+      COUNT(DISTINCT CASE WHEN created_at >= datetime('now', 'start of day') THEN user_id END) AS activeToday,
+      COUNT(DISTINCT CASE WHEN created_at >= datetime('now', '-6 days') THEN user_id END) AS activeSevenDays
+    FROM user_events
+  `).get();
+  const eventTypes = db.prepare(`
+    SELECT event_name AS eventName, COUNT(*) AS count, MAX(created_at) AS lastSeen
+    FROM user_events
+    GROUP BY event_name
+    ORDER BY count DESC, lastSeen DESC
+    LIMIT 30
+  `).all();
+  const subjects = db.prepare(`
+    SELECT subject_id AS subjectId, COUNT(*) AS count
+    FROM user_events
+    WHERE subject_id IS NOT NULL AND subject_id <> ''
+    GROUP BY subject_id
+    ORDER BY count DESC
+  `).all();
+  const daily = db.prepare(`
+    SELECT date(created_at) AS day, COUNT(*) AS count, COUNT(DISTINCT user_id) AS users
+    FROM user_events
+    WHERE created_at >= datetime('now', '-29 days')
+    GROUP BY date(created_at)
+    ORDER BY day ASC
+  `).all();
+  const recentUsers = db.prepare(`
+    SELECT
+      user_id AS userId,
+      COUNT(*) AS eventCount,
+      MIN(created_at) AS firstSeen,
+      MAX(created_at) AS lastSeen,
+      MAX(grade) AS grade,
+      MAX(subject_id) AS lastSubject,
+      MAX(page) AS lastPage
+    FROM user_events
+    GROUP BY user_id
+    ORDER BY lastSeen DESC
+    LIMIT 100
+  `).all();
+  return {
+    totals: Object.fromEntries(Object.entries(totals).map(([key, value]) => [key, Number(value || 0)])),
+    eventTypes,
+    subjects,
+    daily,
+    recentUsers,
+  };
 }
 
 function parseTutorText(text, meta) {
@@ -230,10 +329,56 @@ async function solveWithProvider({ question, imageData, grade, subject, textbook
 
 const server = http.createServer(async (request, response) => {
   if (request.method === 'OPTIONS') {
-    response.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' });
+    response.writeHead(204, { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' });
     return response.end();
   }
-  if (request.method === 'GET' && request.url === '/api/health') return sendJson(response, 200, { ok: true, aiConfigured: Boolean(apiKey), provider: aiProvider, model, visionModel });
+  if (request.method === 'GET' && request.url === '/api/health') return sendJson(response, 200, { ok: true, aiConfigured: Boolean(apiKey), analyticsConfigured: Boolean(adminPassword), provider: aiProvider, model, visionModel });
+  if (request.method === 'POST' && request.url === '/api/admin/login') {
+    try {
+      if (!adminPassword) return sendJson(response, 503, { error: 'ADMIN_PASSWORD is not configured' });
+      const payload = await readBody(request);
+      if (!safeSecretEquals(payload.password, adminPassword)) return sendJson(response, 401, { error: 'invalid admin password' });
+      return sendJson(response, 200, { ok: true, token: createAdminSession(), expiresIn: adminSessionLifetimeMs });
+    } catch {
+      return sendJson(response, 400, { error: 'invalid login request' });
+    }
+  }
+  if (request.method === 'GET' && request.url === '/api/admin/overview') {
+    if (!requireAdmin(request, response)) return;
+    return sendJson(response, 200, { ok: true, ...adminOverview() });
+  }
+  if (request.method === 'GET' && request.url.startsWith('/api/admin/events')) {
+    if (!requireAdmin(request, response)) return;
+    const url = new URL(request.url, `http://${request.headers.host || '127.0.0.1'}`);
+    const userId = String(url.searchParams.get('userId') || '').trim();
+    const eventName = String(url.searchParams.get('eventName') || '').trim();
+    const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit') || 100)));
+    const where = [];
+    const params = [];
+    if (userId) {
+      where.push('user_id = ?');
+      params.push(userId);
+    }
+    if (eventName) {
+      where.push('event_name = ?');
+      params.push(eventName);
+    }
+    params.push(limit);
+    const events = db.prepare(`
+      SELECT id, client_event_id AS eventId, user_id AS userId, event_name AS eventName,
+        page, subject_id AS subjectId, grade, semester, textbook, metadata_json AS metadata, created_at AS createdAt
+      FROM user_events
+      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
+      ORDER BY id DESC
+      LIMIT ?
+    `).all(...params).map((event) => ({
+      ...event,
+      metadata: (() => {
+        try { return JSON.parse(event.metadata || '{}'); } catch { return {}; }
+      })(),
+    }));
+    return sendJson(response, 200, { ok: true, events });
+  }
   if (request.method === 'POST' && request.url === '/api/events') {
     try {
       const payload = await readBody(request);
@@ -244,6 +389,7 @@ const server = http.createServer(async (request, response) => {
       const rawMetadata = payload.metadata && typeof payload.metadata === 'object' && !Array.isArray(payload.metadata) ? payload.metadata : {};
       const metadata = Object.fromEntries(Object.entries(rawMetadata).filter(([, value]) => ['string', 'number', 'boolean'].includes(typeof value)).slice(0, 12));
       const result = insertEvent.run(
+        String(payload.eventId || '').slice(0, 100) || null,
         userId,
         eventName,
         String(payload.page || '').slice(0, 40) || null,
@@ -260,6 +406,7 @@ const server = http.createServer(async (request, response) => {
     }
   }
   if (request.method === 'GET' && request.url.startsWith('/api/events/summary')) {
+    if (!requireAdmin(request, response)) return;
     const url = new URL(request.url, `http://${request.headers.host || '127.0.0.1'}`);
     const userId = String(url.searchParams.get('userId') || '').trim();
     if (!/^[A-Za-z0-9_-]{1,80}$/.test(userId)) return sendJson(response, 400, { error: 'valid userId is required' });
