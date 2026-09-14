@@ -153,56 +153,210 @@ function requireAdmin(request, response) {
   return true;
 }
 
-function adminOverview() {
-  const totals = db.prepare(`
-    SELECT
-      COUNT(*) AS totalEvents,
-      COUNT(DISTINCT user_id) AS totalUsers,
-      COUNT(DISTINCT CASE WHEN created_at >= datetime('now', 'start of day') THEN user_id END) AS activeToday,
-      COUNT(DISTINCT CASE WHEN created_at >= datetime('now', '-6 days') THEN user_id END) AS activeSevenDays
-    FROM user_events
-  `).get();
-  const eventTypes = db.prepare(`
-    SELECT event_name AS eventName, COUNT(*) AS count, MAX(created_at) AS lastSeen
-    FROM user_events
-    GROUP BY event_name
-    ORDER BY count DESC, lastSeen DESC
-    LIMIT 30
-  `).all();
-  const subjects = db.prepare(`
-    SELECT subject_id AS subjectId, COUNT(*) AS count
-    FROM user_events
-    WHERE subject_id IS NOT NULL AND subject_id <> ''
-    GROUP BY subject_id
-    ORDER BY count DESC
-  `).all();
-  const daily = db.prepare(`
-    SELECT date(created_at) AS day, COUNT(*) AS count, COUNT(DISTINCT user_id) AS users
-    FROM user_events
-    WHERE created_at >= datetime('now', '-29 days')
-    GROUP BY date(created_at)
-    ORDER BY day ASC
-  `).all();
-  const recentUsers = db.prepare(`
-    SELECT
-      user_id AS userId,
-      COUNT(*) AS eventCount,
-      MIN(created_at) AS firstSeen,
-      MAX(created_at) AS lastSeen,
-      MAX(grade) AS grade,
-      MAX(subject_id) AS lastSubject,
-      MAX(page) AS lastPage
-    FROM user_events
-    GROUP BY user_id
-    ORDER BY lastSeen DESC
-    LIMIT 100
-  `).all();
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+function chinaDateOnly(date = new Date()) {
+  return new Date(date.getTime() + SHANGHAI_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+function shiftDateOnly(dateOnly, amount) {
+  const date = new Date(`${dateOnly}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return date.toISOString().slice(0, 10);
+}
+
+function chinaDateToUtcSql(dateOnly) {
+  return new Date(`${dateOnly}T00:00:00+08:00`).toISOString().slice(0, 19).replace('T', ' ');
+}
+
+function isDateOnly(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(`${value}T00:00:00Z`).getTime());
+}
+
+function analyticsRange(searchParams) {
+  const today = chinaDateOnly();
+  const requestedDays = Math.min(366, Math.max(1, Number(searchParams.get('days') || 30)));
+  const endDate = isDateOnly(searchParams.get('end') || '') ? searchParams.get('end') : today;
+  let startDate = isDateOnly(searchParams.get('start') || '') ? searchParams.get('start') : shiftDateOnly(endDate, -(requestedDays - 1));
+  if (startDate > endDate) startDate = endDate;
+  const dayCount = Math.min(366, Math.max(1, Math.round((new Date(`${endDate}T00:00:00Z`) - new Date(`${startDate}T00:00:00Z`)) / 86400000) + 1));
   return {
-    totals: Object.fromEntries(Object.entries(totals).map(([key, value]) => [key, Number(value || 0)])),
+    startDate,
+    endDate,
+    endExclusiveDate: shiftDateOnly(endDate, 1),
+    days: dayCount,
+    startUtc: chinaDateToUtcSql(startDate),
+    endUtc: chinaDateToUtcSql(shiftDateOnly(endDate, 1)),
+  };
+}
+
+function analyticsFilters(searchParams) {
+  const clean = (key, length) => String(searchParams.get(key) || '').trim().slice(0, length);
+  return {
+    subjectId: clean('subjectId', 40),
+    grade: clean('grade', 20),
+    semester: clean('semester', 20),
+    eventName: clean('eventName', 80),
+  };
+}
+
+function eventWhere(range, filters = {}, alias = 'e', includeDates = true) {
+  const column = (name) => `${alias}.${name}`;
+  const clauses = includeDates ? [`${column('created_at')} >= ?`, `${column('created_at')} < ?`] : [];
+  const params = includeDates ? [range.startUtc, range.endUtc] : [];
+  for (const [key, columnName] of [['subjectId', 'subject_id'], ['grade', 'grade'], ['semester', 'semester'], ['eventName', 'event_name']]) {
+    if (filters[key]) {
+      clauses.push(`${column(columnName)} = ?`);
+      params.push(filters[key]);
+    }
+  }
+  return { where: clauses.length ? clauses.join(' AND ') : '1 = 1', params };
+}
+
+function numericRow(row) {
+  return Object.fromEntries(Object.entries(row || {}).map(([key, value]) => [key, Number(value || 0)]));
+}
+
+function percentChange(current, previous) {
+  if (!previous) return current ? 100 : 0;
+  return Math.round(((current - previous) / previous) * 1000) / 10;
+}
+
+function adminOverview(searchParams) {
+  const range = analyticsRange(searchParams);
+  const filters = analyticsFilters(searchParams);
+  const current = eventWhere(range, filters);
+  const previousRange = {
+    ...range,
+    startDate: shiftDateOnly(range.startDate, -range.days),
+    endDate: shiftDateOnly(range.startDate, -1),
+    startUtc: chinaDateToUtcSql(shiftDateOnly(range.startDate, -range.days)),
+    endUtc: chinaDateToUtcSql(range.startDate),
+  };
+  const previous = eventWhere(previousRange, filters);
+  const totals = numericRow(db.prepare(`
+    SELECT COUNT(*) AS totalEvents,
+      COUNT(DISTINCT e.user_id) AS totalUsers,
+      COUNT(DISTINCT date(e.created_at, '+8 hours')) AS activeDays,
+      ROUND(CAST(COUNT(*) AS REAL) / NULLIF(COUNT(DISTINCT e.user_id), 0), 1) AS avgEventsPerUser
+    FROM user_events e WHERE ${current.where}
+  `).get(...current.params));
+  const previousTotals = numericRow(db.prepare(`
+    SELECT COUNT(*) AS totalEvents, COUNT(DISTINCT e.user_id) AS totalUsers,
+      COUNT(DISTINCT date(e.created_at, '+8 hours')) AS activeDays
+    FROM user_events e WHERE ${previous.where}
+  `).get(...previous.params));
+  const newUsers = numericRow(db.prepare(`
+    SELECT COUNT(*) AS count FROM (
+      SELECT user_id, MIN(created_at) AS firstSeen FROM user_events GROUP BY user_id
+    ) first_users WHERE firstSeen >= ? AND firstSeen < ?
+  `).get(range.startUtc, range.endUtc)).count;
+  const returningUsers = Math.max(0, totals.totalUsers - newUsers);
+  const eventTypes = db.prepare(`
+    SELECT e.event_name AS eventName, COUNT(*) AS count, COUNT(DISTINCT e.user_id) AS users, MAX(e.created_at) AS lastSeen
+    FROM user_events e WHERE ${current.where}
+    GROUP BY e.event_name ORDER BY count DESC, lastSeen DESC LIMIT 40
+  `).all(...current.params).map((item) => ({ ...item, count: Number(item.count || 0), users: Number(item.users || 0) }));
+  const subjects = db.prepare(`
+    SELECT COALESCE(NULLIF(e.subject_id, ''), '未选择') AS subjectId, COUNT(*) AS count, COUNT(DISTINCT e.user_id) AS users
+    FROM user_events e WHERE ${current.where}
+    GROUP BY subjectId ORDER BY count DESC
+  `).all(...current.params).map((item) => ({ ...item, count: Number(item.count || 0), users: Number(item.users || 0) }));
+  const pages = db.prepare(`
+    SELECT COALESCE(NULLIF(e.page, ''), '未标记页面') AS page, COUNT(*) AS count
+    FROM user_events e WHERE ${current.where}
+    GROUP BY page ORDER BY count DESC LIMIT 20
+  `).all(...current.params).map((item) => ({ ...item, count: Number(item.count || 0) }));
+  const dailyRows = db.prepare(`
+    SELECT date(e.created_at, '+8 hours') AS day, COUNT(*) AS count,
+      COUNT(DISTINCT e.user_id) AS users,
+      SUM(CASE WHEN e.event_name LIKE 'ai_%' THEN 1 ELSE 0 END) AS aiEvents,
+      SUM(CASE WHEN e.event_name IN ('submit_answer', 'submit_self_test') THEN 1 ELSE 0 END) AS answerEvents
+    FROM user_events e WHERE ${current.where}
+    GROUP BY day ORDER BY day ASC
+  `).all(...current.params);
+  const dailyNewRows = db.prepare(`
+    SELECT date(firstSeen, '+8 hours') AS day, COUNT(*) AS newUsers
+    FROM (SELECT user_id, MIN(created_at) AS firstSeen FROM user_events GROUP BY user_id)
+    WHERE firstSeen >= ? AND firstSeen < ? GROUP BY day
+  `).all(range.startUtc, range.endUtc);
+  const dailyReturningRows = db.prepare(`
+    SELECT date(e.created_at, '+8 hours') AS day, COUNT(DISTINCT e.user_id) AS returningUsers
+    FROM user_events e JOIN (SELECT user_id, MIN(created_at) AS firstSeen FROM user_events GROUP BY user_id) first_users
+      ON first_users.user_id = e.user_id
+    WHERE ${current.where} AND first_users.firstSeen < ? GROUP BY day
+  `).all(...current.params, range.startUtc);
+  const dailyMap = new Map(dailyRows.map((item) => [item.day, item]));
+  const dailyNewMap = new Map(dailyNewRows.map((item) => [item.day, Number(item.newUsers || 0)]));
+  const dailyReturningMap = new Map(dailyReturningRows.map((item) => [item.day, Number(item.returningUsers || 0)]));
+  const daily = Array.from({ length: range.days }, (_, index) => {
+    const day = shiftDateOnly(range.startDate, index);
+    const item = dailyMap.get(day) || {};
+    return {
+      day,
+      count: Number(item.count || 0),
+      users: Number(item.users || 0),
+      aiEvents: Number(item.aiEvents || 0),
+      answerEvents: Number(item.answerEvents || 0),
+      newUsers: dailyNewMap.get(day) || 0,
+      returningUsers: dailyReturningMap.get(day) || 0,
+    };
+  });
+  const hourly = db.prepare(`
+    SELECT CAST(strftime('%H', datetime(e.created_at, '+8 hours')) AS INTEGER) AS hour,
+      COUNT(*) AS count, COUNT(DISTINCT e.user_id) AS users
+    FROM user_events e WHERE ${current.where}
+    GROUP BY hour ORDER BY hour ASC
+  `).all(...current.params).map((item) => ({ hour: Number(item.hour || 0), count: Number(item.count || 0), users: Number(item.users || 0) }));
+  const answerStats = numericRow(db.prepare(`
+    SELECT COUNT(*) AS attempts,
+      SUM(CASE WHEN json_extract(e.metadata_json, '$.correct') = 1 THEN 1 ELSE 0 END) AS correct
+    FROM user_events e WHERE ${current.where}
+      AND e.event_name IN ('submit_answer', 'submit_self_test')
+  `).get(...current.params));
+  answerStats.accuracy = answerStats.attempts ? Math.round(answerStats.correct / answerStats.attempts * 1000) / 10 : 0;
+  const recentUsers = db.prepare(`
+    SELECT e.user_id AS userId, COUNT(*) AS eventCount, MIN(e.created_at) AS firstSeen,
+      MAX(e.created_at) AS lastSeen, MAX(e.grade) AS grade, MAX(e.subject_id) AS lastSubject, MAX(e.page) AS lastPage
+    FROM user_events e WHERE ${current.where}
+    GROUP BY e.user_id ORDER BY lastSeen DESC LIMIT 100
+  `).all(...current.params).map((item) => ({ ...item, eventCount: Number(item.eventCount || 0) }));
+  const topUsers = [...recentUsers].sort((left, right) => right.eventCount - left.eventCount || String(right.lastSeen).localeCompare(String(left.lastSeen))).slice(0, 20);
+  const recentEvents = db.prepare(`
+    SELECT e.id, e.client_event_id AS eventId, e.user_id AS userId, e.event_name AS eventName,
+      e.page, e.subject_id AS subjectId, e.grade, e.semester, e.textbook,
+      e.metadata_json AS metadata, e.created_at AS createdAt
+    FROM user_events e WHERE ${current.where} ORDER BY e.id DESC LIMIT 80
+  `).all(...current.params).map((event) => ({
+    ...event,
+    metadata: (() => { try { return JSON.parse(event.metadata || '{}'); } catch { return {}; } })(),
+  }));
+  const optionsWhere = eventWhere(range, {}, 'e');
+  const optionRows = (column) => db.prepare(`SELECT DISTINCT ${column} AS value FROM user_events e WHERE ${optionsWhere.where} AND ${column} IS NOT NULL AND ${column} <> '' ORDER BY value`).all(...optionsWhere.params).map((item) => item.value);
+  return {
+    range: { startDate: range.startDate, endDate: range.endDate, days: range.days, timezone: 'Asia/Shanghai' },
+    filters,
+    totals: { ...totals, newUsers, returningUsers },
+    comparison: {
+      events: percentChange(totals.totalEvents, previousTotals.totalEvents),
+      users: percentChange(totals.totalUsers, previousTotals.totalUsers),
+      activeDays: percentChange(totals.activeDays, previousTotals.activeDays),
+    },
+    answerStats,
     eventTypes,
     subjects,
+    pages,
     daily,
+    hourly,
     recentUsers,
+    topUsers,
+    recentEvents,
+    options: {
+      subjects: optionRows('e.subject_id'),
+      grades: optionRows('e.grade'),
+      semesters: optionRows('e.semester'),
+      eventNames: optionRows('e.event_name'),
+    },
   };
 }
 
@@ -343,33 +497,33 @@ const server = http.createServer(async (request, response) => {
       return sendJson(response, 400, { error: 'invalid login request' });
     }
   }
-  if (request.method === 'GET' && request.url === '/api/admin/overview') {
+  if (request.method === 'GET' && request.url.startsWith('/api/admin/overview')) {
     if (!requireAdmin(request, response)) return;
-    return sendJson(response, 200, { ok: true, ...adminOverview() });
+    const url = new URL(request.url, `http://${request.headers.host || '127.0.0.1'}`);
+    return sendJson(response, 200, { ok: true, ...adminOverview(url.searchParams) });
   }
   if (request.method === 'GET' && request.url.startsWith('/api/admin/events')) {
     if (!requireAdmin(request, response)) return;
     const url = new URL(request.url, `http://${request.headers.host || '127.0.0.1'}`);
-    const userId = String(url.searchParams.get('userId') || '').trim();
-    const eventName = String(url.searchParams.get('eventName') || '').trim();
+    const userId = String(url.searchParams.get('userId') || '').trim().slice(0, 80);
+    const filters = analyticsFilters(url.searchParams);
+    const range = analyticsRange(url.searchParams);
     const limit = Math.min(200, Math.max(1, Number(url.searchParams.get('limit') || 100)));
-    const where = [];
-    const params = [];
+    const eventFilter = eventWhere(range, filters, 'e');
+    const where = [eventFilter.where];
+    const params = [...eventFilter.params];
     if (userId) {
-      where.push('user_id = ?');
+      where.push('e.user_id = ?');
       params.push(userId);
-    }
-    if (eventName) {
-      where.push('event_name = ?');
-      params.push(eventName);
     }
     params.push(limit);
     const events = db.prepare(`
-      SELECT id, client_event_id AS eventId, user_id AS userId, event_name AS eventName,
-        page, subject_id AS subjectId, grade, semester, textbook, metadata_json AS metadata, created_at AS createdAt
+      SELECT e.id, e.client_event_id AS eventId, e.user_id AS userId, e.event_name AS eventName,
+        e.page, e.subject_id AS subjectId, e.grade, e.semester, e.textbook,
+        e.metadata_json AS metadata, e.created_at AS createdAt
       FROM user_events
-      ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
-      ORDER BY id DESC
+      e WHERE ${where.join(' AND ')}
+      ORDER BY e.id DESC
       LIMIT ?
     `).all(...params).map((event) => ({
       ...event,
@@ -377,7 +531,7 @@ const server = http.createServer(async (request, response) => {
         try { return JSON.parse(event.metadata || '{}'); } catch { return {}; }
       })(),
     }));
-    return sendJson(response, 200, { ok: true, events });
+    return sendJson(response, 200, { ok: true, range, filters, events });
   }
   if (request.method === 'POST' && request.url === '/api/events') {
     try {
