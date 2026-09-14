@@ -3,55 +3,92 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>铭惠学习 · 使用日志</title>
+    <title>铭惠学习 · 数据后台</title>
     <style>
-      :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; background: #f5f7fb; color: #1d2a44; }
+      :root { color-scheme: light; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; background: #f4f7fc; color: #1d2a44; }
       * { box-sizing: border-box; }
-      body { margin: 0; min-height: 100vh; }
-      button, input { font: inherit; }
-      .shell { max-width: 1180px; margin: 0 auto; padding: 36px 20px 60px; }
-      .topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
-      .eyebrow { color: #6389df; font-size: 12px; font-weight: 800; letter-spacing: .16em; }
-      h1 { margin: 7px 0 0; font-size: clamp(28px, 4vw, 42px); }
-      h2 { margin: 0; font-size: 20px; }
-      p { color: #7888a6; }
-      .panel, .metric { background: #fff; border: 1px solid #e6ebf4; border-radius: 20px; box-shadow: 0 12px 35px rgba(43, 71, 120, .06); }
-      .login { width: min(420px, 100%); margin: 12vh auto; padding: 30px; }
-      .field { display: grid; gap: 8px; margin: 22px 0; color: #667895; font-size: 14px; font-weight: 700; }
-      input { width: 100%; border: 1px solid #dce4f1; border-radius: 12px; padding: 13px 14px; outline: none; }
-      input:focus { border-color: #5c87ef; box-shadow: 0 0 0 4px #eaf0ff; }
-      button { border: 0; border-radius: 12px; padding: 12px 17px; background: #467cf0; color: #fff; font-weight: 800; cursor: pointer; }
+      body { margin: 0; min-height: 100vh; background: linear-gradient(180deg, #f7f9fd 0, #f2f5fb 100%); }
+      button, input, select { font: inherit; }
+      button { border: 0; border-radius: 11px; padding: 11px 15px; background: #467cf0; color: #fff; font-weight: 800; cursor: pointer; }
+      button:hover { filter: brightness(.98); }
       button.secondary { background: #edf2ff; color: #4671d6; }
+      button.ghost { background: transparent; color: #5976ac; padding-left: 8px; padding-right: 8px; }
       button.danger { background: #fff0f0; color: #d45f69; }
+      button.active { background: #467cf0; color: #fff; box-shadow: 0 5px 16px rgba(70,124,240,.2); }
+      .shell { max-width: 1440px; margin: 0 auto; padding: 30px 24px 64px; }
+      .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
+      .eyebrow { color: #6389df; font-size: 12px; font-weight: 900; letter-spacing: .16em; }
+      h1 { margin: 7px 0 0; font-size: clamp(28px, 4vw, 42px); letter-spacing: -.03em; }
+      h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; }
+      h3 { margin: 0; font-size: 15px; }
+      p { color: #7888a6; line-height: 1.65; }
+      .panel, .metric { background: #fff; border: 1px solid #e4eaf4; border-radius: 20px; box-shadow: 0 12px 35px rgba(43, 71, 120, .06); }
+      .login { width: min(420px, 100%); margin: 12vh auto; padding: 30px; }
+      .field { display: grid; gap: 8px; margin: 20px 0; color: #667895; font-size: 14px; font-weight: 800; }
+      input, select { width: 100%; border: 1px solid #dce4f1; border-radius: 11px; padding: 11px 12px; outline: none; background: #fff; color: #334665; }
+      input:focus, select:focus { border-color: #5c87ef; box-shadow: 0 0 0 4px #eaf0ff; }
       .message { min-height: 22px; color: #d45f69; font-size: 14px; }
       .hidden { display: none !important; }
-      .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
-      .metric { padding: 20px; }
-      .metric span { display: block; color: #8190aa; font-size: 13px; }
-      .metric strong { display: block; margin-top: 8px; font-size: 30px; }
-      .grid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 18px; margin-bottom: 18px; }
-      .panel { padding: 22px; overflow: hidden; }
-      .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 18px; }
-      .chart { display: flex; align-items: end; gap: 7px; height: 190px; padding: 12px 0 26px; border-bottom: 1px solid #e8edf5; }
-      .bar-wrap { height: 100%; flex: 1; display: flex; flex-direction: column; justify-content: end; align-items: center; gap: 6px; min-width: 0; }
-      .bar { width: min(26px, 75%); min-height: 3px; border-radius: 7px 7px 2px 2px; background: linear-gradient(#79a0ff, #477cf0); }
-      .bar-label { color: #9aa8bf; font-size: 10px; transform: rotate(-45deg); white-space: nowrap; }
-      table { width: 100%; border-collapse: collapse; font-size: 13px; }
-      th, td { padding: 11px 8px; border-bottom: 1px solid #edf0f5; text-align: left; vertical-align: top; }
-      th { color: #8190aa; font-weight: 700; }
+      .muted { color: #94a2b9; }
+      .range-note { color: #7183a0; font-size: 13px; }
+      .filters { padding: 16px; margin-bottom: 18px; }
+      .filter-line { display: flex; align-items: end; gap: 10px; flex-wrap: wrap; }
+      .quick { display: flex; gap: 6px; flex-wrap: wrap; }
+      .quick button { padding: 9px 12px; background: #f2f5fb; color: #7183a0; }
+      .quick button.active { background: #467cf0; color: #fff; }
+      .filter-field { display: grid; gap: 6px; min-width: 132px; color: #8190aa; font-size: 12px; font-weight: 800; }
+      .filter-field.date { min-width: 150px; }
+      .filter-actions { display: flex; gap: 7px; margin-left: auto; }
+      .metrics { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 18px; }
+      .metric { padding: 17px; min-width: 0; }
+      .metric span { display: block; color: #8190aa; font-size: 12px; font-weight: 700; }
+      .metric strong { display: block; margin-top: 7px; font-size: 28px; letter-spacing: -.04em; }
+      .metric small { display: block; margin-top: 8px; color: #8e9cb2; font-size: 11px; }
+      .metric small.up { color: #25a27d; }
+      .metric small.down { color: #d86d73; }
+      .grid { display: grid; grid-template-columns: 1.45fr .85fr; gap: 18px; margin-bottom: 18px; }
+      .grid.equal { grid-template-columns: 1fr 1fr; }
+      .panel { padding: 21px; overflow: hidden; margin-bottom: 18px; }
+      .panel:last-child { margin-bottom: 0; }
+      .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
+      .chart-wrap { width: 100%; overflow-x: auto; }
+      .line-chart { display: block; width: 100%; min-width: 620px; height: 270px; }
+      .chart-legend { display: flex; gap: 18px; color: #7888a6; font-size: 12px; margin-top: 2px; }
+      .legend-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+      .bar-list { display: grid; gap: 12px; }
+      .bar-row { display: grid; grid-template-columns: 94px 1fr 54px; align-items: center; gap: 9px; font-size: 13px; }
+      .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #526685; }
+      .bar-track { height: 9px; border-radius: 99px; background: #edf2fa; overflow: hidden; }
+      .bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #78a0ff, #477cf0); }
+      .bar-value { text-align: right; color: #657995; font-weight: 800; }
+      .mini-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-bottom: 18px; }
+      .mini-card { padding: 13px; border-radius: 14px; background: #f7f9fe; border: 1px solid #edf1f8; }
+      .mini-card span { display: block; color: #8796ad; font-size: 11px; }
+      .mini-card strong { display: block; margin-top: 5px; color: #35527f; font-size: 20px; }
+      .heatmap { display: grid; grid-template-columns: repeat(12, 1fr); gap: 7px; }
+      .heat-cell { min-height: 42px; border-radius: 9px; display: grid; place-items: center; color: #536889; font-size: 11px; border: 1px solid rgba(110, 145, 220, .12); }
+      .heat-cell strong { display: block; font-size: 12px; text-align: center; }
+      .heat-label { display: block; color: #7183a0; font-size: 10px; text-align: center; }
+      .table-scroll { overflow: auto; max-height: 500px; }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 560px; }
+      th, td { padding: 10px 8px; border-bottom: 1px solid #edf0f5; text-align: left; vertical-align: top; }
+      th { color: #8190aa; font-weight: 800; position: sticky; top: 0; background: #fff; z-index: 1; }
       td { color: #40516f; }
-      .muted { color: #9aa8bf; }
       .code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; word-break: break-all; }
-      .pill { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #eef4ff; color: #557edc; }
-      @media (max-width: 800px) { .metrics { grid-template-columns: repeat(2, 1fr); } .grid { grid-template-columns: 1fr; } .topbar { align-items: flex-start; } }
-      @media (max-width: 480px) { .shell { padding: 24px 12px 40px; } .metrics { gap: 8px; } .metric { padding: 14px; } .metric strong { font-size: 24px; } .panel { padding: 14px; } th, td { padding: 9px 5px; } }
+      .empty { padding: 28px 0; text-align: center; color: #99a6ba; }
+      .status { min-height: 20px; color: #d45f69; font-size: 13px; }
+      .user-button { padding: 5px 8px; font-size: 11px; }
+      .event-meta { max-width: 260px; color: #7d8ca5; font-size: 11px; word-break: break-word; }
+      @media (max-width: 1120px) { .metrics { grid-template-columns: repeat(3, 1fr); } }
+      @media (max-width: 850px) { .grid, .grid.equal { grid-template-columns: 1fr; } .filter-actions { margin-left: 0; } }
+      @media (max-width: 560px) { .shell { padding: 22px 12px 42px; } .topbar { align-items: stretch; flex-direction: column; } .metrics { grid-template-columns: repeat(2, 1fr); gap: 8px; } .metric { padding: 13px; } .metric strong { font-size: 23px; } .panel { padding: 14px; border-radius: 16px; } .mini-cards { grid-template-columns: repeat(2, 1fr); } .filter-field, .filter-field.date { min-width: 100%; } .filter-actions button { flex: 1; } }
     </style>
   </head>
   <body>
     <main class="shell">
       <section id="login" class="login panel">
         <div class="eyebrow">MINGHUI LEARNING · ADMIN</div>
-        <h1>使用日志后台</h1>
+        <h1>数据监控后台</h1>
         <p>只显示匿名统计和学习行为，不显示题目图片、姓名或答案原文。</p>
         <form id="login-form">
           <label class="field">管理员密码<input id="password" type="password" autocomplete="current-password" required /></label>
@@ -62,23 +99,74 @@
 
       <section id="dashboard" class="hidden">
         <header class="topbar">
-          <div><div class="eyebrow">MINGHUI LEARNING · ANALYTICS</div><h1>使用日志</h1><p>查看学习功能被使用的情况，帮助调整课程和题目。</p></div>
-          <button id="logout" class="danger">退出登录</button>
+          <div><div class="eyebrow">MINGHUI LEARNING · ANALYTICS</div><h1>学习数据看板</h1><p>按日期观察使用趋势、学习行为和各学科内容的实际使用情况。</p></div>
+          <div class="filter-actions"><button id="export" class="secondary">导出事件 CSV</button><button id="logout" class="danger">退出登录</button></div>
         </header>
+
+        <section class="filters panel">
+          <div class="filter-line">
+            <div class="quick" aria-label="快速日期范围">
+              <button data-days="7">近 7 天</button><button data-days="30" class="active">近 30 天</button><button data-days="90">近 90 天</button><button data-days="365">近 1 年</button>
+            </div>
+            <label class="filter-field date">开始日期<input id="start-date" type="date" /></label>
+            <label class="filter-field date">结束日期<input id="end-date" type="date" /></label>
+            <label class="filter-field">学科<select id="subject-filter"><option value="">全部学科</option></select></label>
+            <label class="filter-field">年级<select id="grade-filter"><option value="">全部年级</option></select></label>
+            <label class="filter-field">学期<select id="semester-filter"><option value="">全部学期</option></select></label>
+            <label class="filter-field">行为<select id="event-filter"><option value="">全部行为</option></select></label>
+            <div class="filter-actions"><button id="apply">应用筛选</button><button id="refresh" class="secondary">刷新</button></div>
+          </div>
+          <div id="range-note" class="range-note" style="margin-top:12px"></div>
+          <div id="dashboard-status" class="status"></div>
+        </section>
+
         <section id="metrics" class="metrics"></section>
+
         <div class="grid">
-          <section class="panel"><div class="panel-head"><h2>最近 30 天活跃趋势</h2><span class="muted">事件数 / 用户数</span></div><div id="daily" class="chart"></div></section>
-          <section class="panel"><div class="panel-head"><h2>学科使用</h2></div><div id="subjects"></div></section>
+          <section class="panel">
+            <div class="panel-head"><div><h2>每日活跃趋势</h2><div class="muted" style="font-size:12px;margin-top:5px">事件次数与活跃匿名用户</div></div></div>
+            <div id="daily-chart" class="chart-wrap"></div>
+            <div class="chart-legend"><span><i class="legend-dot" style="background:#477cf0"></i>事件数</span><span><i class="legend-dot" style="background:#27b08c"></i>活跃用户</span></div>
+          </section>
+          <section class="panel"><div class="panel-head"><h2>学科使用分布</h2><span class="muted">次数 / 用户</span></div><div id="subjects" class="bar-list"></div></section>
         </div>
-        <section class="panel" style="margin-bottom:18px"><div class="panel-head"><h2>功能使用次数</h2><button id="refresh" class="secondary">刷新</button></div><div id="event-types"></div></section>
-        <section class="panel"><div class="panel-head"><h2>最近匿名用户</h2><span class="muted">点击用户 ID 查看明细</span></div><div id="users"></div><div id="user-events" class="hidden" style="margin-top:22px"></div></section>
+
+        <section class="panel">
+          <div class="panel-head"><div><h2>用户活跃与学习质量</h2><div class="muted" style="font-size:12px;margin-top:5px">新用户、回访用户和答题正确情况</div></div></div>
+          <div class="mini-cards" id="quality-cards"></div>
+          <div class="grid equal" style="margin:0">
+            <div><h3 style="margin-bottom:13px">每天新用户 / 回访用户</h3><div id="retention-chart" class="chart-wrap"></div></div>
+            <div><h3 style="margin-bottom:13px">24 小时使用热力图</h3><div id="hourly" class="heatmap"></div><div class="muted" style="font-size:11px;margin-top:10px">颜色越深表示该时段事件越多</div></div>
+          </div>
+        </section>
+
+        <div class="grid equal">
+          <section class="panel"><div class="panel-head"><h2>功能使用排行</h2><span class="muted">行为 / 用户数</span></div><div id="event-types"></div></section>
+          <section class="panel"><div class="panel-head"><h2>页面访问排行</h2><span class="muted">次数</span></div><div id="pages" class="bar-list"></div></section>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head"><div><h2>每日数据明细</h2><div class="muted" style="font-size:12px;margin-top:5px">适合观察哪几天活跃、答题和 AI 使用出现变化</div></div></div>
+          <div id="daily-table"></div>
+        </section>
+
+        <div class="grid equal">
+          <section class="panel"><div class="panel-head"><div><h2>活跃用户排行</h2><span class="muted">点击匿名 ID 查看行为明细</span></div></div><div id="users"></div></section>
+          <section class="panel"><div class="panel-head"><div><h2>最近事件</h2><span class="muted">当前筛选范围内最新 80 条</span></div></div><div id="recent-events"></div></section>
+        </div>
+        <section id="user-events" class="panel hidden"></section>
       </section>
     </main>
     <script>
       const $ = (selector) => document.querySelector(selector);
       const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
       const formatNumber = (value) => new Intl.NumberFormat('zh-CN').format(Number(value || 0));
+      const formatPercent = (value) => `${Number(value || 0).toFixed(Number(value || 0) % 1 ? 1 : 0)}%`;
+      const formatDateTime = (value) => value ? String(value).replace('T', ' ').slice(0, 19) : '—';
       let token = sessionStorage.getItem('minghui-admin-token') || '';
+      let latestData = null;
+      let activeDays = 30;
+
       async function api(path, options = {}) {
         const headers = { ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options.headers || {}) };
         const response = await fetch(path, { ...options, headers });
@@ -88,43 +176,61 @@
       }
       function showDashboard() { $('#login').classList.add('hidden'); $('#dashboard').classList.remove('hidden'); }
       function renderTable(headers, rows, empty = '暂无数据') {
-        if (!rows.length) return `<p class="muted">${empty}</p>`;
-        return `<div style="overflow:auto"><table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
+        if (!rows.length) return `<div class="empty">${empty}</div>`;
+        return `<div class="table-scroll"><table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
       }
+      function queryString(extra = {}) {
+        const params = new URLSearchParams(); const start = $('#start-date').value; const end = $('#end-date').value;
+        if (start) params.set('start', start); if (end) params.set('end', end); params.set('days', String(activeDays));
+        for (const [key, id] of [['subjectId', 'subject-filter'], ['grade', 'grade-filter'], ['semester', 'semester-filter'], ['eventName', 'event-filter']]) if ($(id).value) params.set(key, $(id).value);
+        for (const [key, value] of Object.entries(extra)) if (value !== undefined && value !== '') params.set(key, value);
+        return params.toString();
+      }
+      function comparison(value) { const number = Number(value || 0); return `<small class="${number >= 0 ? 'up' : 'down'}">较上一周期 ${number > 0 ? '+' : ''}${number}%</small>`; }
       function renderOverview(data) {
-        const totals = data.totals || {};
-        $('#metrics').innerHTML = [['累计事件', totals.totalEvents], ['匿名用户', totals.totalUsers], ['今日活跃', totals.activeToday], ['近 7 日活跃', totals.activeSevenDays]].map(([label, value]) => `<article class="metric"><span>${label}</span><strong>${formatNumber(value)}</strong></article>`).join('');
-        const daily = data.daily || [];
-        const max = Math.max(1, ...daily.map((item) => Number(item.count || 0)));
-        $('#daily').innerHTML = daily.length ? daily.map((item) => `<div class="bar-wrap" title="${escapeHtml(item.day)}：${item.count} 次，${item.users} 人"><div class="bar" style="height:${Math.max(3, Number(item.count || 0) / max * 145)}px"></div><span class="bar-label">${escapeHtml(item.day.slice(5))}</span></div>`).join('') : '<p class="muted">暂无近 30 天数据</p>';
-        $('#subjects').innerHTML = renderTable(['学科', '次数'], (data.subjects || []).map((item) => `<tr><td><span class="pill">${escapeHtml(item.subjectId || '未选择')}</span></td><td>${formatNumber(item.count)}</td></tr>`));
-        $('#event-types').innerHTML = renderTable(['行为', '次数', '最近发生'], (data.eventTypes || []).map((item) => `<tr><td class="code">${escapeHtml(item.eventName)}</td><td>${formatNumber(item.count)}</td><td class="muted">${escapeHtml(item.lastSeen || '')}</td></tr>`));
-        $('#users').innerHTML = renderTable(['匿名用户 ID', '事件数', '年级', '最近使用'], (data.recentUsers || []).map((item) => `<tr><td><button class="secondary user-button code" data-user-id="${escapeHtml(item.userId)}">${escapeHtml(item.userId)}</button></td><td>${formatNumber(item.eventCount)}</td><td>${escapeHtml(item.grade || '—')}</td><td class="muted">${escapeHtml(item.lastSeen || '')}</td></tr>`));
+        latestData = data; const totals = data.totals || {};
+        const aiEvents = (data.daily || []).reduce((sum, item) => sum + Number(item.aiEvents || 0), 0);
+        const cards = [['事件总数', totals.totalEvents, comparison(data.comparison?.events)], ['匿名用户', totals.totalUsers, comparison(data.comparison?.users)], ['活跃天数', totals.activeDays, comparison(data.comparison?.activeDays)], ['新增用户', totals.newUsers, '首次出现于当前日期范围'], ['回访用户', totals.returningUsers, '之前日期已有记录'], ['AI 解题次数', aiEvents, '包含识题、追问等 AI 行为']];
+        $('#metrics').innerHTML = cards.map(([label, value, hint]) => `<article class="metric"><span>${label}</span><strong>${formatNumber(value)}</strong>${hint.startsWith('<') ? hint : `<small>${hint}</small>`}</article>`).join('');
+        $('#range-note').textContent = `当前范围：${data.range.startDate} 至 ${data.range.endDate}（中国标准时间） · 共 ${data.range.days} 天${Object.values(data.filters || {}).some(Boolean) ? ' · 已应用筛选条件' : ''}`;
+        $('#quality-cards').innerHTML = [['答题次数', data.answerStats?.attempts || 0], ['答题正确', data.answerStats?.correct || 0], ['正确率', formatPercent(data.answerStats?.accuracy || 0)], ['人均事件', Number(totals.avgEventsPerUser || 0).toFixed(1)]].map(([label, value]) => `<div class="mini-card"><span>${label}</span><strong>${value}</strong></div>`).join('');
+        renderLineChart($('#daily-chart'), data.daily || [], 'count', 'users', '#477cf0', '#27b08c'); renderLineChart($('#retention-chart'), data.daily || [], 'newUsers', 'returningUsers', '#f2a84b', '#9a7be8', true);
+        renderBars($('#subjects'), data.subjects || [], 'subjectId', 'count', true); renderBars($('#pages'), data.pages || [], 'page', 'count'); renderHeatmap(data.hourly || []);
+        $('#event-types').innerHTML = renderTable(['行为', '次数', '用户', '最近发生'], (data.eventTypes || []).map((item) => `<tr><td class="code">${escapeHtml(item.eventName)}</td><td>${formatNumber(item.count)}</td><td>${formatNumber(item.users)}</td><td class="muted">${formatDateTime(item.lastSeen)}</td></tr>`));
+        $('#daily-table').innerHTML = renderTable(['日期', '事件', '活跃用户', '新增', '回访', 'AI', '答题'], (data.daily || []).slice().reverse().map((item) => `<tr><td>${escapeHtml(item.day)}</td><td>${formatNumber(item.count)}</td><td>${formatNumber(item.users)}</td><td>${formatNumber(item.newUsers)}</td><td>${formatNumber(item.returningUsers)}</td><td>${formatNumber(item.aiEvents)}</td><td>${formatNumber(item.answerEvents)}</td></tr>`));
+        $('#users').innerHTML = renderTable(['匿名用户', '事件数', '年级', '最后学科', '最近使用'], (data.topUsers || []).map((item) => `<tr><td><button class="secondary user-button code" data-user-id="${escapeHtml(item.userId)}">${escapeHtml(item.userId)}</button></td><td>${formatNumber(item.eventCount)}</td><td>${escapeHtml(item.grade || '—')}</td><td>${escapeHtml(item.lastSubject || '—')}</td><td class="muted">${formatDateTime(item.lastSeen)}</td></tr>`));
         document.querySelectorAll('.user-button').forEach((button) => button.addEventListener('click', () => loadUserEvents(button.dataset.userId)));
+        $('#recent-events').innerHTML = renderTable(['时间', '行为', '用户', '页面', '学科', '附加信息'], (data.recentEvents || []).map((item) => `<tr><td class="muted">${formatDateTime(item.createdAt)}</td><td class="code">${escapeHtml(item.eventName)}</td><td class="code">${escapeHtml(item.userId)}</td><td>${escapeHtml(item.page || '—')}</td><td>${escapeHtml(item.subjectId || '—')}</td><td class="event-meta">${escapeHtml(summarizeMetadata(item.metadata))}</td></tr>`));
+        populateOptions(data.options || {});
       }
-      async function loadOverview() { const data = await api('/api/admin/overview'); renderOverview(data); }
+      function renderLineChart(container, rows, firstKey, secondKey, firstColor, secondColor, compact = false) {
+        const width = 760, height = compact ? 190 : 270, left = 36, right = 14, top = 14, bottom = 30; const values = rows.flatMap((item) => [Number(item[firstKey] || 0), Number(item[secondKey] || 0)]); const max = Math.max(1, ...values);
+        const x = (index) => left + (rows.length <= 1 ? 0 : index * (width - left - right) / (rows.length - 1)); const y = (value) => height - bottom - (value / max) * (height - top - bottom); const points = (key) => rows.map((item, index) => `${x(index).toFixed(1)},${y(Number(item[key] || 0)).toFixed(1)}`).join(' ');
+        const labels = rows.filter((_, index) => rows.length <= 10 || index % Math.ceil(rows.length / 8) === 0).map((item) => { const originalIndex = rows.findIndex((candidate) => candidate.day === item.day); return `<text x="${x(originalIndex)}" y="${height - 8}" text-anchor="middle">${escapeHtml(item.day.slice(5))}</text>`; }).join('');
+        const grid = [0, .25, .5, .75, 1].map((ratio) => `<line x1="${left}" x2="${width - right}" y1="${y(max * ratio)}" y2="${y(max * ratio)}" stroke="#edf1f7"/><text x="3" y="${y(max * ratio) + 4}">${formatNumber(Math.round(max * ratio))}</text>`).join('');
+        container.innerHTML = `<svg class="line-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="数据趋势图"><g fill="#9aa8bd" font-size="10">${grid}${labels}</g><polyline fill="none" stroke="${firstColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${points(firstKey)}"/><polyline fill="none" stroke="${secondColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="${points(secondKey)}"/></svg>`;
+      }
+      function renderBars(container, items, labelKey, valueKey, showUsers = false) {
+        if (!items.length) { container.innerHTML = '<div class="empty">暂无数据</div>'; return; } const max = Math.max(1, ...items.map((item) => Number(item[valueKey] || 0)));
+        container.innerHTML = items.slice(0, 12).map((item) => `<div class="bar-row" title="${escapeHtml(item[labelKey])}"><span class="bar-label">${escapeHtml(item[labelKey])}</span><span class="bar-track"><i class="bar-fill" style="display:block;width:${Math.max(2, Number(item[valueKey] || 0) / max * 100)}%"></i></span><span class="bar-value">${formatNumber(item[valueKey])}${showUsers ? `<small class="muted" style="display:block;font-size:10px;font-weight:400">${formatNumber(item.users)}人</small>` : ''}</span></div>`).join('');
+      }
+      function renderHeatmap(items) {
+        const values = Array.from({ length: 24 }, (_, hour) => items.find((item) => Number(item.hour) === hour) || { hour, count: 0, users: 0 }); const max = Math.max(1, ...values.map((item) => Number(item.count || 0)));
+        $('#hourly').innerHTML = values.map((item) => { const intensity = Number(item.count || 0) / max; return `<div class="heat-cell" title="${item.hour}:00 · ${item.count} 次 · ${item.users} 人" style="background:rgba(71,124,240,${(0.07 + intensity * .78).toFixed(2)})"><span><span class="heat-label">${String(item.hour).padStart(2, '0')}时</span><strong>${formatNumber(item.count)}</strong></span></div>`; }).join('');
+      }
+      function summarizeMetadata(metadata) { return Object.entries(metadata || {}).filter(([key]) => !['question', 'answer', 'recognizedQuestion', 'imageData'].includes(key)).map(([key, value]) => `${key}=${String(value)}`).join(' · ').slice(0, 180) || '—'; }
+      function populateOptions(options) {
+        for (const [id, key, label] of [['subject-filter', 'subjects', '全部学科'], ['grade-filter', 'grades', '全部年级'], ['semester-filter', 'semesters', '全部学期'], ['event-filter', 'eventNames', '全部行为']]) { const select = $(`#${id}`); const old = select.value; select.innerHTML = `<option value="">${label}</option>` + (options[key] || []).map((item) => `<option value="${escapeHtml(item)}">${escapeHtml(item)}</option>`).join(''); select.value = old; }
+      }
+      async function loadOverview() { $('#dashboard-status').textContent = '正在加载数据…'; try { renderOverview(await api(`/api/admin/overview?${queryString()}`)); $('#dashboard-status').textContent = ''; } catch (error) { $('#dashboard-status').textContent = error.message; } }
       async function loadUserEvents(userId) {
-        const box = $('#user-events');
-        box.classList.remove('hidden');
-        box.innerHTML = `<h2>用户明细：<span class="code">${escapeHtml(userId)}</span></h2><p class="muted">加载中…</p>`;
-        try {
-          const data = await api(`/api/admin/events?userId=${encodeURIComponent(userId)}&limit=100`);
-          box.innerHTML = `<div class="panel-head"><h2>用户明细：<span class="code">${escapeHtml(userId)}</span></h2><button class="secondary" onclick="document.querySelector('#user-events').classList.add('hidden')">收起</button></div>` + renderTable(['时间', '行为', '页面', '学科', '年级'], (data.events || []).map((item) => `<tr><td class="muted">${escapeHtml(item.createdAt)}</td><td class="code">${escapeHtml(item.eventName)}</td><td>${escapeHtml(item.page || '—')}</td><td>${escapeHtml(item.subjectId || '—')}</td><td>${escapeHtml(item.grade || '—')}</td></tr>`));
-        } catch (error) { box.innerHTML = `<p class="message">${escapeHtml(error.message)}</p>`; }
+        const box = $('#user-events'); box.classList.remove('hidden'); box.innerHTML = `<div class="panel-head"><h2>用户明细：<span class="code">${escapeHtml(userId)}</span></h2><button class="secondary" id="close-user">收起</button></div><p class="muted">加载中…</p>`; $('#close-user').addEventListener('click', () => box.classList.add('hidden'));
+        try { const data = await api(`/api/admin/events?${queryString({ userId, limit: 200 })}`); box.innerHTML = `<div class="panel-head"><div><h2>用户明细：<span class="code">${escapeHtml(userId)}</span></h2><div class="muted" style="font-size:12px;margin-top:5px">当前筛选范围内的行为记录</div></div><button class="secondary" id="close-user">收起</button></div>` + renderTable(['时间', '行为', '页面', '学科', '年级', '附加信息'], (data.events || []).map((item) => `<tr><td class="muted">${formatDateTime(item.createdAt)}</td><td class="code">${escapeHtml(item.eventName)}</td><td>${escapeHtml(item.page || '—')}</td><td>${escapeHtml(item.subjectId || '—')}</td><td>${escapeHtml(item.grade || '—')}</td><td class="event-meta">${escapeHtml(summarizeMetadata(item.metadata))}</td></tr>`)); $('#close-user').addEventListener('click', () => box.classList.add('hidden')); } catch (error) { box.innerHTML = `<p class="message">${escapeHtml(error.message)}</p>`; }
       }
-      $('#login-form').addEventListener('submit', async (event) => {
-        event.preventDefault();
-        $('#login-message').textContent = '登录中…';
-        try {
-          const data = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password: $('#password').value }) });
-          token = data.token;
-          sessionStorage.setItem('minghui-admin-token', token);
-          $('#login-message').textContent = '';
-          showDashboard();
-          await loadOverview();
-        } catch (error) { $('#login-message').textContent = error.message; }
-      });
-      $('#refresh').addEventListener('click', () => loadOverview().catch((error) => alert(error.message)));
+      function exportCsv() { const rows = latestData?.recentEvents || []; const header = ['时间', '匿名用户', '行为', '页面', '学科', '年级', '学期', '教材', '附加信息']; const csv = [header, ...rows.map((item) => [item.createdAt, item.userId, item.eventName, item.page, item.subjectId, item.grade, item.semester, item.textbook, summarizeMetadata(item.metadata)])].map((row) => row.map((cell) => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')).join('\n'); const blob = new Blob([`\ufeff${csv}`], { type: 'text/csv;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = `minghui-events-${latestData?.range?.startDate || 'data'}-${latestData?.range?.endDate || ''}.csv`; link.click(); URL.revokeObjectURL(url); }
+      document.querySelectorAll('[data-days]').forEach((button) => button.addEventListener('click', () => { activeDays = Number(button.dataset.days); $('#start-date').value = ''; $('#end-date').value = ''; document.querySelectorAll('[data-days]').forEach((item) => item.classList.toggle('active', item === button)); loadOverview(); }));
+      $('#apply').addEventListener('click', () => loadOverview()); $('#refresh').addEventListener('click', () => loadOverview()); $('#export').addEventListener('click', exportCsv);
+      $('#login-form').addEventListener('submit', async (event) => { event.preventDefault(); $('#login-message').textContent = '登录中…'; try { const data = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ password: $('#password').value }) }); token = data.token; sessionStorage.setItem('minghui-admin-token', token); $('#login-message').textContent = ''; showDashboard(); await loadOverview(); } catch (error) { $('#login-message').textContent = error.message; } });
       $('#logout').addEventListener('click', () => { token = ''; sessionStorage.removeItem('minghui-admin-token'); $('#dashboard').classList.add('hidden'); $('#login').classList.remove('hidden'); });
       if (token) { showDashboard(); loadOverview().catch(() => { token = ''; sessionStorage.removeItem('minghui-admin-token'); $('#dashboard').classList.add('hidden'); $('#login').classList.remove('hidden'); }); }
     </script>
