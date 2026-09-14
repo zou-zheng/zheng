@@ -182,7 +182,7 @@
       function queryString(extra = {}) {
         const params = new URLSearchParams(); const start = $('#start-date').value; const end = $('#end-date').value;
         if (start) params.set('start', start); if (end) params.set('end', end); params.set('days', String(activeDays));
-        for (const [key, id] of [['subjectId', 'subject-filter'], ['grade', 'grade-filter'], ['semester', 'semester-filter'], ['eventName', 'event-filter']]) if ($(id).value) params.set(key, $(id).value);
+        for (const [key, id] of [['subjectId', 'subject-filter'], ['grade', 'grade-filter'], ['semester', 'semester-filter'], ['eventName', 'event-filter']]) if ($(`#${id}`).value) params.set(key, $(`#${id}`).value);
         for (const [key, value] of Object.entries(extra)) if (value !== undefined && value !== '') params.set(key, value);
         return params.toString();
       }
